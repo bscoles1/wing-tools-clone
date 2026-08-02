@@ -31,7 +31,7 @@ export type InsertUser = typeof users.$inferInsert;
  * Basic: Intermediate features, more uploads.
  * Premium: All features, unlimited uploads.
  */
-export const subscriptionTiers = mysqlEnum("tier", ["free", "basic", "premium"]);
+export const subscriptionTiers = mysqlEnum("tier", ["Free", "Basic", "Premium"]);
 
 /**
  * User subscription information.
@@ -40,7 +40,7 @@ export const subscriptionTiers = mysqlEnum("tier", ["free", "basic", "premium"])
 export const subscriptions = mysqlTable("subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  tier: subscriptionTiers.notNull().default("free"),
+  tier: subscriptionTiers.notNull().default("Free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   status: varchar("status", { length: 50 }).default("active"), // active, canceled, past_due

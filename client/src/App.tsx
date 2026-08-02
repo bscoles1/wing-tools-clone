@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Uploader from "./pages/Uploader";
 import Pricing from "./pages/Pricing";
+import SnapshotDetail from "./pages/SnapshotDetail";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +16,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/uploader"} component={Uploader} />
       <Route path={"/pricing"} component={Pricing} />
+      <Route path={"/snapshot/:id"} component={SnapshotDetail} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

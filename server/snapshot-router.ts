@@ -157,7 +157,7 @@ export const snapshotRouter = router({
     if (!subscription) {
       await upsertSubscription({
         userId: ctx.user.id,
-        tier: "free",
+        tier: "Free",
       });
       subscription = await getUserSubscription(ctx.user.id);
     }

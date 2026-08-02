@@ -205,7 +205,7 @@ function parseInputs(dataRoot: any): WingInput[] {
     if (typeof groupData !== "object" || groupData === null) continue;
 
     // Iterate over individual inputs within the group
-    for (const [indexStr, inputData] of Object.entries(groupData)) {
+    for (const [indexStr, inputData] of Object.entries(groupData || {})) {
       if (typeof inputData !== "object") continue;
 
       const index = parseInt(indexStr, 10);
@@ -245,7 +245,7 @@ function parseOutputs(dataRoot: any): WingOutput[] {
     if (typeof groupData !== "object" || groupData === null) continue;
 
     // Iterate over individual outputs within the group
-    for (const [indexStr, outputData] of Object.entries(groupData)) {
+    for (const [indexStr, outputData] of Object.entries(groupData || {})) {
       if (typeof outputData !== "object") continue;
 
       const index = parseInt(indexStr, 10);
@@ -314,8 +314,25 @@ function parseChannels(dataRoot: any): WingChannel[] {
       };
     }
 
-    // Parse routing to buses and matrices (simplified for now)
-    // In a full implementation, you would parse the routing matrix
+    // Parse routing to buses and matrices
+    const chRoutes = getNestedValue(channelData, ["rt"]);
+    if (chRoutes && typeof chRoutes === "object") {
+      for (const [routeType, routeObject] of Object.entries(chRoutes)) {
+        if (typeof routeObject !== "object" || routeObject === null) continue;
+        for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
+          if (toBoolean(routeValue)) {
+            const routeIndex = parseInt(routeIndexStr, 10);
+            if (!isNaN(routeIndex)) {
+              channel.routes.push({
+                destination: routeType as "bus" | "matrix" | "output",
+                group: routeType,
+                index: routeIndex,
+              });
+            }
+          }
+        }
+      }
+    }
 
     channels.push(channel);
   }
@@ -350,6 +367,26 @@ function parseBuses(dataRoot: any): WingBus[] {
       mute: toBoolean((busItem as any).mute),
     };
 
+    // Parse routing from bus to matrices and outputs
+    const busRoutes = getNestedValue(busItem, ["rt"]);
+    if (busRoutes && typeof busRoutes === "object") {
+      for (const [routeType, routeObject] of Object.entries(busRoutes)) {
+        if (typeof routeObject !== "object" || routeObject === null) continue;
+        for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
+          if (toBoolean(routeValue)) {
+            const routeIndex = parseInt(routeIndexStr, 10);
+            if (!isNaN(routeIndex)) {
+              bus.routes.push({
+                destination: routeType as "matrix" | "output",
+                group: routeType,
+                index: routeIndex,
+              });
+            }
+          }
+        }
+      }
+    }
+
     buses.push(bus);
   }
 
@@ -383,6 +420,26 @@ function parseMatrices(dataRoot: any): WingMatrix[] {
       mute: toBoolean((mtxItem as any).mute),
     };
 
+    // Parse routing from matrix to outputs
+    const mtxRoutes = getNestedValue(mtxItem, ["rt"]);
+    if (mtxRoutes && typeof mtxRoutes === "object") {
+      for (const [routeType, routeObject] of Object.entries(mtxRoutes)) {
+        if (typeof routeObject !== "object" || routeObject === null) continue;
+        for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
+          if (toBoolean(routeValue)) {
+            const routeIndex = parseInt(routeIndexStr, 10);
+            if (!isNaN(routeIndex)) {
+              matrix.routes.push({
+                destination: routeType as "output",
+                group: routeType,
+                index: routeIndex,
+              });
+            }
+          }
+        }
+      }
+    }
+
     matrices.push(matrix);
   }
 
@@ -399,7 +456,7 @@ function countActiveRoutes(
 ): number {
   let count = 0;
 
-  // Count channel routes
+  // Count channel input sources
   for (const channel of channels) {
     if (channel.inputSource) count++;
     count += channel.routes.length;
@@ -467,6 +524,14 @@ export function serializeWingSnapshot(snapshot: WingMixerSnapshot): any {
 
   // Serialize channels
   for (const channel of snapshot.channels) {
+    const chRoutes: any = {};
+    for (const route of channel.routes) {
+      if (!chRoutes[route.group]) {
+        chRoutes[route.group] = {};
+      }
+      chRoutes[route.group][route.index] = 1; // Assuming 1 for active route
+    }
+
     output.ae_data.ch[channel.index] = {
       name: channel.name,
       gain: channel.gain,
@@ -474,26 +539,45 @@ export function serializeWingSnapshot(snapshot: WingMixerSnapshot): any {
       solo: channel.solo ? 1 : 0,
       src_grp: channel.inputSource?.group,
       src_in: channel.inputSource?.index,
+      rt: chRoutes,
     };
   }
 
   // Serialize buses
   for (const bus of snapshot.buses) {
+    const busRoutes: any = {};
+    for (const route of bus.routes) {
+      if (!busRoutes[route.group]) {
+        busRoutes[route.group] = {};
+      }
+      busRoutes[route.group][route.index] = 1;
+    }
+
     output.ae_data.bus[bus.index] = {
       name: bus.name,
       busmono: bus.isMono ? 1 : 0,
       gain: bus.gain,
       mute: bus.mute ? 1 : 0,
+      rt: busRoutes,
     };
   }
 
   // Serialize matrices
   for (const matrix of snapshot.matrices) {
+    const mtxRoutes: any = {};
+    for (const route of matrix.routes) {
+      if (!mtxRoutes[route.group]) {
+        mtxRoutes[route.group] = {};
+      }
+      mtxRoutes[route.group][route.index] = 1;
+    }
+
     output.ae_data.mtx[matrix.index] = {
       name: matrix.name,
       mtxmono: matrix.isMono ? 1 : 0,
       gain: matrix.gain,
       mute: matrix.mute ? 1 : 0,
+      rt: mtxRoutes,
     };
   }
 

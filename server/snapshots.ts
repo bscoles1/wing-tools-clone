@@ -125,7 +125,7 @@ export async function getUserSubscription(userId: number) {
  */
 export async function upsertSubscription(data: {
   userId: number;
-  tier: "free" | "basic" | "premium";
+  tier: "Free" | "Basic" | "Premium";
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   status?: string;
@@ -180,7 +180,7 @@ export async function hasFeatureAccess(
   feature: "routing_table" | "signal_flow" | "routing_diff" | "snapshot_linter" | "source_management"
 ): Promise<boolean> {
   const subscription = await getUserSubscription(userId);
-  const tier = subscription?.tier || "free";
+  const tier = subscription?.tier || "Free";
 
   const featureTiers: Record<string, string[]> = {
     routing_table: ["free", "basic", "premium"],
@@ -196,7 +196,7 @@ export async function hasFeatureAccess(
 /**
  * Get upload limit for a tier
  */
-export function getUploadLimit(tier: "free" | "basic" | "premium"): number {
+export function getUploadLimit(tier: "Free" | "Basic" | "Premium"): number {
   const limits: Record<string, number> = {
     free: 5,
     basic: 10,
@@ -210,7 +210,7 @@ export function getUploadLimit(tier: "free" | "basic" | "premium"): number {
  */
 export async function hasReachedUploadLimit(userId: number): Promise<boolean> {
   const subscription = await getUserSubscription(userId);
-  const tier = subscription?.tier || "free";
+  const tier = subscription?.tier || "Free";
   const limit = getUploadLimit(tier);
 
   const userSnapshots = await getUserSnapshots(userId);
