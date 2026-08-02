@@ -5,7 +5,6 @@ import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Trash2, Download, Share2, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
 
 export default function SnapshotDetail() {
   const { isAuthenticated, loading } = useAuth();
@@ -17,6 +16,50 @@ export default function SnapshotDetail() {
     { snapshotId },
     { enabled: isAuthenticated && !isNaN(snapshotId) }
   );
+
+  const generatePDFMutation = trpc.snapshot.generatePDF.useMutation({
+    onSuccess: (data) => {
+      // Create a blob and download the PDF
+      const binaryString = atob(data.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to generate PDF");
+    },
+  });
+
+  const generateExcelMutation = trpc.snapshot.generateExcel.useMutation({
+    onSuccess: (data) => {
+      // Create a blob and download the Excel file
+      const binaryString = atob(data.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel file downloaded successfully!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to generate Excel");
+    },
+  });
 
   const deleteSnapshotMutation = trpc.snapshot.deleteSnapshot.useMutation({
     onSuccess: () => {
@@ -126,10 +169,31 @@ export default function SnapshotDetail() {
             </div>
 
             {/* Actions */}
-            <div className="mt-8 flex gap-4">
-              <Button>
-                <Download className="w-4 h-4 mr-2" /> Download Original
-              </Button>
+            <div className="mt-8 flex flex-col gap-4">
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => generatePDFMutation.mutate({ snapshotId })}
+                  disabled={generatePDFMutation.isPending}
+                >
+                  {generatePDFMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download PDF
+                </Button>
+                <Button
+                  onClick={() => generateExcelMutation.mutate({ snapshotId })}
+                  disabled={generateExcelMutation.isPending}
+                >
+                  {generateExcelMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download Excel
+                </Button>
+              </div>
               <Button variant="outline">
                 <Share2 className="w-4 h-4 mr-2" /> Share
               </Button>

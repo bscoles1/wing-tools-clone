@@ -27,8 +27,10 @@
 - [x] Implement SnapshotDetail page for viewing and managing individual snapshots.
 
 ## Phase 6: Routing Table Generator (PDF) and Excel Export
-- [ ] Implement Routing Table Generator for PDF output (channel lists, I/O tables, routing matrices, stagebox labels).
-- [ ] Implement Excel (XLSX) export for physical inputs, mixer channels, physical outputs, and routing cross-reference matrices.
+- [x] Implement Routing Table Generator for PDF output (channel lists, I/O tables, routing matrices, stagebox labels).
+- [x] Implement Excel (XLSX) export for physical inputs, mixer channels, physical outputs, and routing cross-reference matrices.
+- [x] Add download buttons to snapshot detail page for PDF and Excel exports.
+- [x] Integrate PDF and Excel generation with tRPC procedures and feature access control.
 
 ## Phase 7: Signal Flow Diagram
 - [ ] Build an interactive Signal Flow Diagram visualization with collapsible groups and hover details.

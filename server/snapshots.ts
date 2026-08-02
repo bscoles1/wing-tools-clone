@@ -183,11 +183,11 @@ export async function hasFeatureAccess(
   const tier = subscription?.tier || "Free";
 
   const featureTiers: Record<string, string[]> = {
-    routing_table: ["free", "basic", "premium"],
-    signal_flow: ["basic", "premium"],
-    routing_diff: ["basic", "premium"],
-    snapshot_linter: ["premium"],
-    source_management: ["basic", "premium"],
+    routing_table: ["Free", "Basic", "Premium"],
+    signal_flow: ["Basic", "Premium"],
+    routing_diff: ["Basic", "Premium"],
+    snapshot_linter: ["Premium"],
+    source_management: ["Basic", "Premium"],
   };
 
   return featureTiers[feature]?.includes(tier) || false;
@@ -198,9 +198,9 @@ export async function hasFeatureAccess(
  */
 export function getUploadLimit(tier: "Free" | "Basic" | "Premium"): number {
   const limits: Record<string, number> = {
-    free: 5,
-    basic: 10,
-    premium: 100,
+    Free: 5,
+    Basic: 10,
+    Premium: 100,
   };
   return limits[tier] || 5;
 }

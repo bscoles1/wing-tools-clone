@@ -185,6 +185,124 @@ export const snapshotRouter = router({
     }),
 
   /**
+   * Generate PDF routing table for a snapshot
+   */
+  generatePDF: protectedProcedure
+    .input(z.object({ snapshotId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const snapshot = await getSnapshotById(input.snapshotId);
+
+      if (!snapshot) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Snapshot not found",
+        });
+      }
+
+      // Verify ownership
+      if (snapshot.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this snapshot",
+        });
+      }
+
+      // Check feature access
+      const hasAccess = await hasFeatureAccess(ctx.user.id, "routing_table");
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This feature is not available on your current plan",
+        });
+      }
+
+      if (!snapshot.parsedData) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Snapshot data not available",
+        });
+      }
+
+      try {
+        const parsed = JSON.parse(snapshot.parsedData);
+        const { generateRoutingTablePDF } = await import("./exporters/pdfExporter");
+        const pdfBuffer = await generateRoutingTablePDF(parsed);
+
+        return {
+          success: true,
+          data: pdfBuffer.toString("base64"),
+          filename: `${snapshot.filename.replace(".snap", "")}-routing-table.pdf`,
+          mimeType: "application/pdf",
+        };
+      } catch (error) {
+        console.error("Failed to generate PDF:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate PDF",
+        });
+      }
+    }),
+
+  /**
+   * Generate Excel workbook with routing tables for a snapshot
+   */
+  generateExcel: protectedProcedure
+    .input(z.object({ snapshotId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const snapshot = await getSnapshotById(input.snapshotId);
+
+      if (!snapshot) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Snapshot not found",
+        });
+      }
+
+      // Verify ownership
+      if (snapshot.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this snapshot",
+        });
+      }
+
+      // Check feature access
+      const hasAccess = await hasFeatureAccess(ctx.user.id, "routing_table");
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This feature is not available on your current plan",
+        });
+      }
+
+      if (!snapshot.parsedData) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Snapshot data not available",
+        });
+      }
+
+      try {
+        const parsed = JSON.parse(snapshot.parsedData);
+        const { generateRoutingTableExcel } = await import("./exporters/excelExporter");
+        const excelBuffer = await generateRoutingTableExcel(parsed);
+
+        return {
+          success: true,
+          data: excelBuffer.toString("base64"),
+          filename: `${snapshot.filename.replace(".snap", "")}-routing-table.xlsx`,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        };
+      } catch (error) {
+        console.error("Failed to generate Excel:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate Excel",
+        });
+      }
+    }),
+
+  /**
    * Export snapshot as modified .snap file (for Source Management)
    */
   exportSnapshot: protectedProcedure
