@@ -8,6 +8,9 @@ import Home from "./pages/Home";
 import Uploader from "./pages/Uploader";
 import Pricing from "./pages/Pricing";
 import SnapshotDetail from "./pages/SnapshotDetail";
+import SignalFlowDiagram from "./pages/SignalFlowDiagram";
+import RoutingDiff from "./pages/RoutingDiff";
+import SnapshotLinter from "./pages/SnapshotLinter";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -17,6 +20,9 @@ function Router() {
       <Route path={"/uploader"} component={Uploader} />
       <Route path={"/pricing"} component={Pricing} />
       <Route path={"/snapshot/:id"} component={SnapshotDetail} />
+      <Route path={"/snapshot/:id/signal-flow"} component={SignalFlowDiagram} />
+      <Route path={"/routing-diff"} component={RoutingDiff} />
+      <Route path={"/snapshot/:id/linter"} component={SnapshotLinter} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -33,13 +33,19 @@
 - [x] Integrate PDF and Excel generation with tRPC procedures and feature access control.
 
 ## Phase 7: Signal Flow Diagram
-- [ ] Build an interactive Signal Flow Diagram visualization with collapsible groups and hover details.
+- [x] Build an interactive Signal Flow Diagram visualization with collapsible groups and hover details.
+- [x] Implement color-coded node visualization for inputs, channels, buses, matrices, and outputs.
+- [x] Add expandable nodes to show routing connections.
 
 ## Phase 8: Routing Diff Tool
-- [ ] Implement the Routing Diff tool for side-by-side comparison of two .snap files.
+- [x] Implement the Routing Diff tool for side-by-side comparison of two .snap files.
+- [x] Detect added, removed, and modified channels, buses, and matrices.
+- [x] Display detailed change information for routing, sources, and levels.
 
 ## Phase 9: Snapshot Linter
-- [ ] Develop a rule-based Snapshot Linter for detecting configuration errors.
+- [x] Develop a rule-based Snapshot Linter for detecting configuration errors.
+- [x] Implement 8 linting rules: unpatched channels, unrouted channels, muted routed channels, unrouted buses, unrouted matrices, unused inputs, high gain levels, and multiple solo channels.
+- [x] Display severity levels (error, warning, info) with affected items.
 
 ## Phase 10: Source Management tool
 - [ ] Implement the Source Management tool for remapping source properties.
