@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface FlowNode {
@@ -20,7 +20,7 @@ interface FlowNode {
 }
 
 export default function SignalFlowDiagram() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const snapshotId = parseInt(params.id, 10);
@@ -32,15 +32,23 @@ export default function SignalFlowDiagram() {
     { enabled: isAuthenticated && !isNaN(snapshotId) }
   );
 
-  // Redirect if not authenticated
-  if (!loading && !isAuthenticated) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isNaN(snapshotId)) setLocation("/404");
+  }, [snapshotId, setLocation]);
 
-  if (isNaN(snapshotId)) {
-    setLocation("/404");
-    return null;
+  useEffect(() => {
+    if (snapshotError) {
+      toast.error(snapshotError.message);
+      setLocation("/uploader");
+    }
+  }, [snapshotError, setLocation]);
+
+  if (loading || !isAuthenticated || isNaN(snapshotId)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-label="Loading signal flow" />
+      </div>
+    );
   }
 
   if (isSnapshotLoading) {
@@ -52,14 +60,7 @@ export default function SignalFlowDiagram() {
     );
   }
 
-  if (snapshotError) {
-    toast.error(snapshotError.message);
-    setLocation("/uploader");
-    return null;
-  }
-
-  if (!snapshot || !snapshot.parsed) {
-    setLocation("/404");
+  if (snapshotError || !snapshot || !snapshot.parsed) {
     return null;
   }
 
@@ -163,6 +164,27 @@ export default function SignalFlowDiagram() {
     });
   }
 
+  // Build reverse adjacency so every stage can reveal the complete signal path.
+  for (const channel of parsed.channels) {
+    const channelId = `channel_${channel.index}`;
+    if (channel.inputSource) {
+      nodes.get(`input_${channel.inputSource.group}_${channel.inputSource.index}`)?.connections.push(channelId);
+    }
+    for (const route of channel.routes) {
+      nodes.get(`${route.destination}_${route.index}`)?.connections.push(channelId);
+    }
+  }
+  for (const bus of parsed.buses) {
+    for (const route of bus.routes) {
+      nodes.get(`${route.destination}_${route.index}`)?.connections.push(`bus_${bus.index}`);
+    }
+  }
+  for (const matrix of parsed.matrices) {
+    for (const route of matrix.routes) {
+      nodes.get(`${route.destination}_${route.index}`)?.connections.push(`matrix_${matrix.index}`);
+    }
+  }
+
   const toggleExpanded = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
     if (newExpanded.has(nodeId)) {
@@ -188,6 +210,11 @@ export default function SignalFlowDiagram() {
       default:
         return "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700";
     }
+  };
+
+  const getNodeTooltip = (node: FlowNode) => {
+    const status = [node.mute ? "Muted" : "Unmuted", node.solo ? "Solo" : "Not solo"].join(" · ");
+    return `${node.name} · ${node.type} ${node.index} · ${node.connections.length} connected stage(s) · ${status}`;
   };
 
   const getNodeTextColor = (type: string) => {
@@ -251,6 +278,8 @@ export default function SignalFlowDiagram() {
                   <div
                     key={node.id}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${getNodeColor(node.type)}`}
+                    title={getNodeTooltip(node)}
+                    aria-label={getNodeTooltip(node)}
                     onClick={() => toggleExpanded(node.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -293,6 +322,8 @@ export default function SignalFlowDiagram() {
                   <div
                     key={node.id}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${getNodeColor(node.type)}`}
+                    title={getNodeTooltip(node)}
+                    aria-label={getNodeTooltip(node)}
                     onClick={() => toggleExpanded(node.id)}
                   >
                     <div className="flex items-center justify-between mb-2">

@@ -16,7 +16,7 @@ interface DiffItem {
 }
 
 export default function RoutingDiff() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
   const [, setLocation] = useLocation();
 
   const [file1Id, setFile1Id] = useState<number | null>(null);
@@ -27,11 +27,21 @@ export default function RoutingDiff() {
   const { data: snapshots } = trpc.snapshot.listSnapshots.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const { data: firstSnapshot, isLoading: isFirstSnapshotLoading } = trpc.snapshot.getSnapshot.useQuery(
+    { snapshotId: file1Id ?? 0 },
+    { enabled: Boolean(isAuthenticated && file1Id) }
+  );
+  const { data: secondSnapshot, isLoading: isSecondSnapshotLoading } = trpc.snapshot.getSnapshot.useQuery(
+    { snapshotId: file2Id ?? 0 },
+    { enabled: Boolean(isAuthenticated && file2Id) }
+  );
 
-  // Redirect if not authenticated
-  if (!loading && !isAuthenticated) {
-    setLocation("/");
-    return null;
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-label="Loading routing diff" />
+      </div>
+    );
   }
 
   const handleCompare = async () => {
@@ -48,17 +58,17 @@ export default function RoutingDiff() {
     setIsComparing(true);
 
     try {
-      // Get both snapshots
-      const snap1 = snapshots?.find((s) => s.id === file1Id);
-      const snap2 = snapshots?.find((s) => s.id === file2Id);
+      // Load the complete normalized models through getSnapshot rather than shipping parsedData in list results.
+      const snap1 = firstSnapshot;
+      const snap2 = secondSnapshot;
 
-      if (!snap1 || !snap2 || !snap1.parsedData || !snap2.parsedData) {
-        toast.error("Failed to load snapshot data");
+      if (!snap1?.parsed || !snap2?.parsed) {
+        toast.error("The selected snapshots are still loading or do not contain parsed data.");
         return;
       }
 
-      const parsed1 = JSON.parse(snap1.parsedData);
-      const parsed2 = JSON.parse(snap2.parsedData);
+      const parsed1 = snap1.parsed as any;
+      const parsed2 = snap2.parsed as any;
 
       const differences: DiffItem[] = [];
 
@@ -288,6 +298,13 @@ export default function RoutingDiff() {
         </Card>
 
         {/* Comparison Results */}
+        {(isFirstSnapshotLoading || isSecondSnapshotLoading) && (file1Id || file2Id) && (
+          <Card className="p-6 mb-8 border-slate-200 dark:border-slate-800 text-center">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
+            <p className="text-slate-600 dark:text-slate-400">Loading selected snapshots…</p>
+          </Card>
+        )}
+
         {diffs.length > 0 && (
           <Card className="p-6 border-slate-200 dark:border-slate-800">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">

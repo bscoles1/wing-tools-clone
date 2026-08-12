@@ -7,7 +7,7 @@
 
 ## Phase 2: Database Setup and Stripe Integration
 - [x] Set up database schema for users, subscriptions, and uploaded snapshots.
-- [ ] Implement Stripe integration for payment processing.
+- [x] Implement Stripe integration for payment processing.
 - [x] Ensure tier names in database schema match 'Free', 'Basic', 'Premium'.
 
 ## Phase 3: Core .snap File Parser
@@ -48,18 +48,50 @@
 - [x] Display severity levels (error, warning, info) with affected items.
 
 ## Phase 10: Source Management tool
-- [ ] Implement the Source Management tool for remapping source properties.
-- [ ] Enable downloading of modified .snap files.
+- [x] Implement the Source Management tool for remapping source properties.
+- [x] Enable downloading of modified .snap files.
 
 ## Phase 11: User Authentication and Tiered Access
-- [ ] Implement user authentication.
-- [ ] Set up tiered access levels (Free, Basic, Premium) for features.
+- [x] Implement user authentication.
+- [x] Set up tiered access levels (Free, Basic, Premium) for features.
 
 ## Phase 12: Pricing Page with Stripe Checkout
-- [ ] Create the pricing page with a tier comparison table.
-- [ ] Integrate Stripe-based payment flow for subscriptions.
+- [x] Create the pricing page with a tier comparison table.
+- [x] Integrate Stripe-based payment flow for subscriptions.
 
 ## Phase 13: Integration, Testing, and Deployment
-- [ ] Integrate all developed features.
-- [ ] Conduct end-to-end testing.
-- [ ] Prepare for deployment and deliver the functional application to the user.
+- [x] Integrate all developed features.
+- [x] Conduct end-to-end testing.
+- [x] Prepare for deployment and deliver the functional application to the user.
+
+## Repair Pass
+- [x] Audit and repair all reported parser, database, API, frontend, and runtime errors; add regression coverage and verify the repaired flows.
+
+### Repair Notes
+- [x] Confirm valid Behringer WING `.snap` parsing for uploaded files.
+- [x] Confirm `parsedData` storage and retrieval for large normalized snapshots.
+- [x] Confirm all feature pages use the current snapshot API shape.
+- [x] Verify browser upload, snapshot detail, exports, visualization, diff, and linter flows.
+- [x] Run TypeScript checks, Vitest tests, production build, and inspect runtime logs.
+- [x] Save a repair checkpoint after all checks pass.
+
+### Handoff
+- [x] Create project handoff documentation in `HANDOFF.md`.
+- [x] Update `HANDOFF.md` with final repair results and any remaining limitations.
+
+### Scope Gaps Found During Review
+- [x] Complete Source Management, Stripe integration, and remaining tier/access-control work before final project completion.
+- [x] Resolve the known Signal Flow, Routing Diff, and Snapshot Linter completeness gaps recorded in `HANDOFF.md`.
+- [x] Update `todo.md` and checkpoint only after verification.
+
+## Repair Pass Log
+- [x] Investigate the `parsedData` database error and snapshot upload failure.
+- [x] Inspect and repair parser validation for the `ae_data` WING snapshot format.
+- [x] Verify all API/UI data-shape assumptions and error handling.
+- [x] Add or update Vitest regression tests for parser and upload behavior.
+- [x] Verify build, tests, server logs, and browser flows.
+- [x] Save the repaired project checkpoint.
+
+## Final Repair Status
+- [x] All currently reported errors repaired and verified.
+- [x] Handoff documentation updated with the final status.

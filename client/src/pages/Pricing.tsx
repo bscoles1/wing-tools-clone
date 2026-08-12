@@ -1,13 +1,41 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { startLogin } from "@/const";
-import { Check, X } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { Check, X, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export default function Pricing() {
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+
+  const checkoutMutation = trpc.stripe.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      toast.success("Subscription upgraded successfully!");
+      setLocation("/uploader");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to initiate checkout");
+      setSelectedTier(null);
+    },
+  });
+
+  const handleSubscribe = (tierName: string) => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    if (tierName === "Free") {
+      setLocation("/uploader");
+      return;
+    }
+    setSelectedTier(tierName);
+    checkoutMutation.mutate({ tier: tierName as "Basic" | "Premium" });
+  };
 
   const tiers = [
     {
@@ -43,7 +71,7 @@ export default function Pricing() {
         { name: "Source Management", included: true },
         { name: "Priority Support", included: false },
       ],
-      cta: "Start Free Trial",
+      cta: "Upgrade to Basic",
       highlighted: false,
     },
     {
@@ -61,26 +89,24 @@ export default function Pricing() {
         { name: "Source Management", included: true },
         { name: "Priority Support", included: true },
       ],
-      cta: "Start Free Trial",
+      cta: "Upgrade to Premium",
       highlighted: true,
     },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
       <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-            Choose the plan that fits your needs. All plans include a 14-day free trial.
+            Choose the plan that fits your needs. Powered securely by Stripe.
           </p>
         </div>
       </div>
 
-      {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-3 gap-8">
           {tiers.map((tier, index) => (
@@ -88,8 +114,8 @@ export default function Pricing() {
               key={index}
               className={`relative flex flex-col p-8 transition-all ${
                 tier.highlighted
-                  ? "ring-2 ring-blue-600 dark:ring-blue-400 scale-105 shadow-xl"
-                  : "border-slate-200 dark:border-slate-800"
+                  ? "ring-2 ring-blue-600 dark:ring-blue-400 scale-105 shadow-xl bg-white dark:bg-slate-900"
+                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
               }`}
             >
               {tier.highlighted && (
@@ -119,123 +145,36 @@ export default function Pricing() {
                 </div>
               </div>
 
-              <Button
-                size="lg"
-                className={`w-full mb-8 ${
-                  tier.highlighted
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                    : ""
-                }`}
-                variant={tier.highlighted ? "default" : "outline"}
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    startLogin();
-                  } else {
-                    // TODO: Integrate Stripe checkout
-                    alert(`Stripe checkout for ${tier.name} tier`);
-                  }
-                }}
-              >
-                {tier.cta}
-              </Button>
-
-              <div className="space-y-4 flex-1">
-                {tier.features.map((feature, featureIndex) => (
-                  <div key={featureIndex} className="flex items-start gap-3">
+              <ul className="space-y-4 mb-8 flex-1">
+                {tier.features.map((feature, fIndex) => (
+                  <li key={fIndex} className="flex items-center gap-3 text-sm">
                     {feature.included ? (
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
                     ) : (
-                      <X className="w-5 h-5 text-slate-300 dark:text-slate-700 flex-shrink-0 mt-0.5" />
+                      <X className="w-5 h-5 text-slate-300 dark:text-slate-700 shrink-0" />
                     )}
-                    <span
-                      className={`text-sm ${
-                        feature.included
-                          ? "text-slate-900 dark:text-white"
-                          : "text-slate-500 dark:text-slate-500"
-                      }`}
-                    >
+                    <span className={feature.included ? "text-slate-900 dark:text-white font-medium" : "text-slate-400 dark:text-slate-600"}>
                       {feature.name}
                     </span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
+
+              <Button
+                className="w-full"
+                variant={tier.highlighted ? "default" : "outline"}
+                disabled={checkoutMutation.isPending && selectedTier === tier.name}
+                onClick={() => handleSubscribe(tier.name)}
+              >
+                {checkoutMutation.isPending && selectedTier === tier.name ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {tier.cta}
+              </Button>
             </Card>
           ))}
         </div>
       </div>
-
-      {/* FAQ Section */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-12 text-center">
-          Frequently Asked Questions
-        </h2>
-
-        <div className="space-y-8">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-              Can I cancel anytime?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Yes, you can cancel your subscription at any time. No questions asked, no long-term contracts.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-              What payment methods do you accept?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              We accept all major credit cards (Visa, Mastercard, American Express) through Stripe.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-              Do you offer refunds?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              We offer a 30-day money-back guarantee if you're not satisfied with your subscription.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-              Can I upgrade or downgrade my plan?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Absolutely! You can change your plan at any time. We'll prorate any charges or credits.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-              Do you offer team discounts?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Yes! Contact our sales team for volume discounts and team pricing options.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-          Ready to get started?
-        </h2>
-        <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-          Start with our free plan and upgrade whenever you're ready.
-        </p>
-        {!isAuthenticated && (
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-            onClick={startLogin}
-          >
-            Create Free Account
-          </Button>
-        )}
-      </section>
     </div>
   );
 }

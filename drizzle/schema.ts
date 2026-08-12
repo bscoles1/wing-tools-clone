@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, longtext } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -70,7 +70,7 @@ export const snapshots = mysqlTable("snapshots", {
   totalOutputs: int("totalOutputs"),
   totalChannels: int("totalChannels"),
   activeRoutes: int("activeRoutes"),
-  parsedData: text("parsedData"), // JSON string of normalized internal model (optional, for caching)
+  parsedData: longtext("parsedData"), // JSON string of normalized internal model (optional, for caching)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -3,9 +3,12 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { snapshotRouter } from "./snapshot-router";
+import { stripeRouter } from "./stripe-router";
 
 export const appRouter = router({
   system: systemRouter,
+  snapshot: snapshotRouter,
+  stripe: stripeRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -16,7 +19,6 @@ export const appRouter = router({
       } as const;
     }),
   }),
-  snapshot: snapshotRouter,
 });
 
 export type AppRouter = typeof appRouter;

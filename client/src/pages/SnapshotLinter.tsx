@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Info } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface LintIssue {
@@ -15,12 +15,13 @@ interface LintIssue {
 }
 
 export default function SnapshotLinter() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const snapshotId = parseInt(params.id, 10);
 
   const [issues, setIssues] = useState<LintIssue[]>([]);
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const { data: snapshot, isLoading: isSnapshotLoading, error: snapshotError } = trpc.snapshot.getSnapshot.useQuery(
@@ -28,15 +29,23 @@ export default function SnapshotLinter() {
     { enabled: isAuthenticated && !isNaN(snapshotId) }
   );
 
-  // Redirect if not authenticated
-  if (!loading && !isAuthenticated) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isNaN(snapshotId)) setLocation("/404");
+  }, [snapshotId, setLocation]);
 
-  if (isNaN(snapshotId)) {
-    setLocation("/404");
-    return null;
+  useEffect(() => {
+    if (snapshotError) {
+      toast.error(snapshotError.message);
+      setLocation("/uploader");
+    }
+  }, [snapshotError, setLocation]);
+
+  if (loading || !isAuthenticated || isNaN(snapshotId)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-label="Loading snapshot" />
+      </div>
+    );
   }
 
   if (isSnapshotLoading) {
@@ -48,14 +57,7 @@ export default function SnapshotLinter() {
     );
   }
 
-  if (snapshotError) {
-    toast.error(snapshotError.message);
-    setLocation("/uploader");
-    return null;
-  }
-
-  if (!snapshot || !snapshot.parsed) {
-    setLocation("/404");
+  if (snapshotError || !snapshot || !snapshot.parsed) {
     return null;
   }
 
@@ -109,7 +111,22 @@ export default function SnapshotLinter() {
         });
       }
 
-      // Rule 5: Check for matrices with no routes
+      // Rule 5: Check for buses that receive no active channel sends.
+      const busesWithoutSends = parsed.buses.filter((bus: any) =>
+        !parsed.channels.some((channel: any) =>
+          channel.routes.some((route: any) => route.destination === "bus" && route.index === bus.index)
+        )
+      );
+      if (busesWithoutSends.length > 0) {
+        foundIssues.push({
+          severity: "warning",
+          rule: "Missing Bus Sends",
+          message: `${busesWithoutSends.length} bus(es) have no active channel sends`,
+          affectedItems: busesWithoutSends.map((bus: any) => bus.name),
+        });
+      }
+
+      // Rule 6: Check for matrices with no routes
       const unroutedMatrices = parsed.matrices.filter((m: any) => m.routes.length === 0);
       if (unroutedMatrices.length > 0) {
         foundIssues.push({
@@ -120,7 +137,22 @@ export default function SnapshotLinter() {
         });
       }
 
-      // Rule 6: Check for unused inputs (inputs not connected to any channel)
+      // Rule 7: Check for explicit OFF route entries in the snapshot.
+      const offRouteItems = [
+        ...parsed.channels.flatMap((channel: any) => (channel.offRoutes ?? []).map((route: any) => `${channel.name} → ${route.group} ${route.index}`)),
+        ...parsed.buses.flatMap((bus: any) => (bus.offRoutes ?? []).map((route: any) => `${bus.name} → ${route.group} ${route.index}`)),
+        ...parsed.matrices.flatMap((matrix: any) => (matrix.offRoutes ?? []).map((route: any) => `${matrix.name} → ${route.group} ${route.index}`)),
+      ];
+      if (offRouteItems.length > 0) {
+        foundIssues.push({
+          severity: "info",
+          rule: "OFF Routes",
+          message: `${offRouteItems.length} route(s) are explicitly OFF`,
+          affectedItems: offRouteItems,
+        });
+      }
+
+      // Rule 8: Check for unused inputs (inputs not connected to any channel)
       const usedInputs = new Set<string>();
       for (const ch of parsed.channels as any[]) {
         if (ch.inputSource) {
@@ -138,7 +170,7 @@ export default function SnapshotLinter() {
         });
       }
 
-      // Rule 7: Check for high gain values (potential clipping)
+      // Rule 9: Check for high gain values (potential clipping)
       const highGainChannels = parsed.channels.filter((ch: any) => (ch.gain || 0) > 6);
       if (highGainChannels.length > 0) {
         foundIssues.push({
@@ -149,7 +181,7 @@ export default function SnapshotLinter() {
         });
       }
 
-      // Rule 8: Check for solo enabled on multiple channels
+      // Rule 10: Check for solo enabled on multiple channels
       const soloChannels = parsed.channels.filter((ch: any) => ch.solo);
       if (soloChannels.length > 1) {
         foundIssues.push({
@@ -161,6 +193,7 @@ export default function SnapshotLinter() {
       }
 
       setIssues(foundIssues);
+      setHasAnalyzed(true);
 
       if (foundIssues.length === 0) {
         toast.success("No issues found! Your configuration looks good.");
@@ -299,12 +332,22 @@ export default function SnapshotLinter() {
           </Card>
         )}
 
-        {issues.length === 0 && !isAnalyzing && (
+        {!hasAnalyzed && !isAnalyzing && (
+          <Card className="p-6 border-slate-200 dark:border-slate-800 text-center">
+            <Info className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+            <p className="text-lg font-semibold text-slate-900 dark:text-white">Ready to Analyze</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Click "Run Analysis" to check this snapshot for routing and configuration issues.
+            </p>
+          </Card>
+        )}
+
+        {hasAnalyzed && issues.length === 0 && !isAnalyzing && (
           <Card className="p-6 border-slate-200 dark:border-slate-800 text-center">
             <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
             <p className="text-lg font-semibold text-slate-900 dark:text-white">No Issues Found</p>
             <p className="text-slate-600 dark:text-slate-400 mt-2">
-              Your snapshot configuration looks good! Click "Run Analysis" to check for issues.
+              Your snapshot configuration passed all current linting rules.
             </p>
           </Card>
         )}

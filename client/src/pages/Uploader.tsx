@@ -22,20 +22,18 @@ export default function Uploader() {
   const uploadSnapshotMutation = trpc.snapshot.uploadSnapshot.useMutation({
     onSuccess: (data) => {
       toast.success(`Snapshot uploaded successfully! (${data.summary.totalChannels} channels)`);
-      setIsProcessing(false);
-      listSnapshotsQuery.refetch();
+      void listSnapshotsQuery.refetch();
       setUploadedSnapshots([]);
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to upload snapshot");
-      setIsProcessing(false);
     },
   });
 
-  // Redirect if not authenticated
-  if (!loading && !isAuthenticated) {
-    setLocation("/");
-    return null;
+  // The auth hook performs redirects after loading settles. Do not navigate during render.
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-label="Loading uploader" />
+      </div>
+    );
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -61,7 +59,7 @@ export default function Uploader() {
   };
 
   const processFiles = async (files: File[]) => {
-    const snapFiles = files.filter((f) => f.name.endsWith(".snap") || f.type === "application/json");
+    const snapFiles = files.filter((f) => f.name.toLowerCase().endsWith(".snap") || f.type === "application/json");
 
     if (snapFiles.length === 0) {
       toast.error("Please select a .snap file");
@@ -70,23 +68,37 @@ export default function Uploader() {
 
     setIsProcessing(true);
 
-    for (const file of snapFiles) {
-      try {
-        const text = await file.text();
-        const rawJson = JSON.parse(text);
+    try {
+      for (const file of snapFiles) {
+        try {
+          // WING exports are UTF-8 JSON; remove a possible BOM before parsing.
+          const text = (await file.text()).replace(/^\uFEFF/, "").trim();
+          if (!text) throw new Error("The selected file is empty.");
 
-        // Upload to S3 first (simplified - in production, use manus-upload-file)
-        const fileKey = `snapshots/${Date.now()}-${file.name}`;
+          let rawJson: unknown;
+          try {
+            rawJson = JSON.parse(text);
+          } catch {
+            throw new Error("The selected file is not valid JSON. Export the snapshot again from WING.");
+          }
 
-        await uploadSnapshotMutation.mutateAsync({
-          filename: file.name,
-          fileKey,
-          rawJson,
-        });
-      } catch (error) {
-        console.error("Error processing file:", error);
-        toast.error(`Failed to process ${file.name}`);
+          if (!rawJson || typeof rawJson !== "object") {
+            throw new Error("The snapshot JSON must contain an object with an ae_data root.");
+          }
+
+          const fileKey = `snapshots/${Date.now()}-${file.name}`;
+          await uploadSnapshotMutation.mutateAsync({
+            filename: file.name,
+            fileKey,
+            rawJson,
+          });
+        } catch (error) {
+          console.error(`Error processing ${file.name}:`, error);
+          toast.error(error instanceof Error ? error.message : `Failed to process ${file.name}`);
+        }
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 

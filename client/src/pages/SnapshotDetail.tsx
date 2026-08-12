@@ -5,9 +5,10 @@ import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Trash2, Download, Share2, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export default function SnapshotDetail() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const snapshotId = parseInt(params.id, 10);
@@ -71,15 +72,23 @@ export default function SnapshotDetail() {
     },
   });
 
-  // Redirect if not authenticated or invalid snapshotId
-  if (!loading && !isAuthenticated) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isNaN(snapshotId)) setLocation("/404");
+  }, [snapshotId, setLocation]);
 
-  if (isNaN(snapshotId)) {
-    setLocation("/404");
-    return null;
+  useEffect(() => {
+    if (snapshotError) {
+      toast.error(snapshotError.message);
+      setLocation("/uploader");
+    }
+  }, [snapshotError, setLocation]);
+
+  if (loading || !isAuthenticated || isNaN(snapshotId)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-label="Loading snapshot" />
+      </div>
+    );
   }
 
   if (isSnapshotLoading) {
@@ -91,14 +100,7 @@ export default function SnapshotDetail() {
     );
   }
 
-  if (snapshotError) {
-    toast.error(snapshotError.message);
-    setLocation("/uploader");
-    return null;
-  }
-
-  if (!snapshot) {
-    setLocation("/404");
+  if (snapshotError || !snapshot) {
     return null;
   }
 
@@ -228,7 +230,11 @@ export default function SnapshotDetail() {
               >
                 <AlertCircle className="w-5 h-5 mr-2" /> Snapshot Linter
               </Button>
-              <Button className="w-full justify-start" variant="ghost">
+              <Button
+                className="w-full justify-start"
+                variant="ghost"
+                onClick={() => setLocation(`/snapshot/${snapshotId}/source-management`)}
+              >
                 <Settings className="w-5 h-5 mr-2" /> Source Management
               </Button>
             </div>

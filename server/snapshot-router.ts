@@ -27,7 +27,7 @@ export const snapshotRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check upload limit
+      // Check upload limit before parsing or writing anything.
       const limitReached = await hasReachedUploadLimit(ctx.user.id);
       if (limitReached) {
         throw new TRPCError({
@@ -36,12 +36,20 @@ export const snapshotRouter = router({
         });
       }
 
+      let parsed;
       try {
-        // Parse the snapshot
-        const parsed = parseWingSnapshot(input.rawJson);
+        parsed = parseWingSnapshot(input.rawJson);
+      } catch (error) {
+        console.error("Failed to parse WING snapshot:", error);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error instanceof Error ? error.message : "Invalid WING snapshot JSON.",
+        });
+      }
 
-        // Store in database
-        await createSnapshot({
+      const parsedData = JSON.stringify(parsed);
+      try {
+        const insertResult = await createSnapshot({
           userId: ctx.user.id,
           filename: input.filename,
           fileKey: input.fileKey,
@@ -53,22 +61,30 @@ export const snapshotRouter = router({
           totalOutputs: parsed.summary.totalOutputs,
           totalChannels: parsed.summary.totalChannels,
           activeRoutes: parsed.summary.activeRoutes,
-          parsedData: JSON.stringify(parsed),
+          parsedData,
         });
 
-        const userSnapshots = await getUserSnapshots(ctx.user.id);
-        const newSnapshot = userSnapshots[userSnapshots.length - 1];
+        // Drizzle's MySQL adapter returns the ResultSetHeader as the first tuple item.
+        const resultHeader = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+        const insertedId = Number((resultHeader as { insertId?: number } | undefined)?.insertId ?? 0);
+        const snapshotId = insertedId > 0
+          ? insertedId
+          : (await getUserSnapshots(ctx.user.id)).sort((a, b) => b.id - a.id)[0]?.id ?? 0;
+
+        if (!snapshotId) {
+          throw new Error("Snapshot was saved but its ID could not be determined.");
+        }
 
         return {
           success: true,
-          snapshotId: newSnapshot?.id || 0,
+          snapshotId,
           summary: parsed.summary,
         };
       } catch (error) {
-        console.error("Failed to parse snapshot:", error);
+        console.error("Failed to store parsed WING snapshot:", error);
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Failed to parse snapshot file. Ensure it is a valid WING .snap file.",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "The snapshot was parsed, but could not be saved. Please try again.",
         });
       }
     }),
@@ -344,9 +360,13 @@ export const snapshotRouter = router({
       let parsed = JSON.parse(snapshot.parsedData);
 
       // Apply modifications if provided
-      if (input.modifications) {
-        // Modifications would be applied here
-        // This is a placeholder for future implementation
+      if (input.modifications && (input.modifications as any).inputGains) {
+        const gains = (input.modifications as any).inputGains as Record<string, number>;
+        for (const inputObj of parsed.inputs) {
+          if (gains[inputObj.id] !== undefined) {
+            inputObj.gain = gains[inputObj.id];
+          }
+        }
       }
 
       // Serialize back to WING format

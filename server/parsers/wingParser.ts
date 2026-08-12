@@ -42,6 +42,11 @@ export interface WingChannel {
     index: number;
     level?: number;
   }>;
+  offRoutes: Array<{
+    destination: "bus" | "matrix" | "output";
+    group: string;
+    index: number;
+  }>;
   gain?: number;
   mute?: boolean;
   solo?: boolean;
@@ -58,6 +63,11 @@ export interface WingBus {
     index: number;
     level?: number;
   }>;
+  offRoutes: Array<{
+    destination: "matrix" | "output";
+    group: string;
+    index: number;
+  }>;
   gain?: number;
   mute?: boolean;
 }
@@ -72,6 +82,11 @@ export interface WingMatrix {
     group: string;
     index: number;
     level?: number;
+  }>;
+  offRoutes: Array<{
+    destination: "output";
+    group: string;
+    index: number;
   }>;
   gain?: number;
   mute?: boolean;
@@ -136,22 +151,36 @@ function toNumber(value: any): number | undefined {
  * Parse a Behringer WING .snap file (JSON) into the internal data model
  */
 export function parseWingSnapshot(rawJson: any): WingMixerSnapshot {
-  // Locate the data root (ae_data or root itself)
-  let dataRoot = rawJson;
-  if (rawJson.ae_data && typeof rawJson.ae_data === "object") {
-    dataRoot = rawJson.ae_data;
+  let document = rawJson;
+
+  if (typeof document === "string") {
+    try {
+      document = JSON.parse(document.replace(/^\uFEFF/, "").trim());
+    } catch {
+      throw new Error("Invalid WING snapshot: the file is not valid JSON.");
+    }
   }
 
-  if (!dataRoot || typeof dataRoot !== "object") {
-    throw new Error("Invalid WING snapshot: could not locate data root");
+  if (!document || typeof document !== "object" || Array.isArray(document)) {
+    throw new Error("Invalid WING snapshot: expected a JSON object.");
   }
 
-  // Extract metadata
+  const dataRoot = document.ae_data;
+  if (!dataRoot || typeof dataRoot !== "object" || Array.isArray(dataRoot)) {
+    throw new Error("Invalid WING snapshot: missing the ae_data root object.");
+  }
+
+  const expectedSections = ["io", "ch", "bus", "mtx", "main"];
+  if (!expectedSections.some((section) => Object.prototype.hasOwnProperty.call(dataRoot, section))) {
+    throw new Error("Invalid WING snapshot: ae_data does not contain io, ch, bus, mtx, or main sections.");
+  }
+
+  // Extract metadata from the document first, then the ae_data object.
   const metadata = {
-    mixerName: dataRoot.name || "WING Mixer",
-    mixerModel: dataRoot.model || "wing",
-    firmware: dataRoot.fw || undefined,
-    snapshotSchema: dataRoot.schema || "snapshot.9",
+    mixerName: document.name || dataRoot.name || "WING Mixer",
+    mixerModel: document.model || dataRoot.model || "wing",
+    firmware: document.fw || dataRoot.fw || undefined,
+    snapshotSchema: document.schema || dataRoot.schema || "snapshot.9",
     createdAt: new Date().toISOString(),
   };
 
@@ -218,7 +247,7 @@ function parseInputs(dataRoot: any): WingInput[] {
         index,
         gain: toNumber((inputData as any).gain),
         phantomPower: toBoolean((inputData as any).phantom),
-        stereoMode: (inputData as any).stereo === true ? "stereo" : "mono",
+        stereoMode: toBoolean((inputData as any).stereo) ? "stereo" : "mono",
         usedBy: [],
       };
 
@@ -299,6 +328,7 @@ function parseChannels(dataRoot: any): WingChannel[] {
       index,
       name: (channelData as any).name || `Channel ${index}`,
       routes: [],
+      offRoutes: [],
       gain: toNumber((channelData as any).gain),
       mute: toBoolean((channelData as any).mute),
       solo: toBoolean((channelData as any).solo),
@@ -320,16 +350,16 @@ function parseChannels(dataRoot: any): WingChannel[] {
       for (const [routeType, routeObject] of Object.entries(chRoutes)) {
         if (typeof routeObject !== "object" || routeObject === null) continue;
         for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
-          if (toBoolean(routeValue)) {
             const routeIndex = parseInt(routeIndexStr, 10);
             if (!isNaN(routeIndex)) {
-              channel.routes.push({
+              const route = {
                 destination: routeType as "bus" | "matrix" | "output",
                 group: routeType,
                 index: routeIndex,
-              });
+              };
+              if (toBoolean(routeValue)) channel.routes.push(route);
+              else channel.offRoutes.push(route);
             }
-          }
         }
       }
     }
@@ -363,6 +393,7 @@ function parseBuses(dataRoot: any): WingBus[] {
       name: (busItem as any).name || `Bus ${index}`,
       isMono: toBoolean((busItem as any).busmono),
       routes: [],
+      offRoutes: [],
       gain: toNumber((busItem as any).gain),
       mute: toBoolean((busItem as any).mute),
     };
@@ -373,16 +404,16 @@ function parseBuses(dataRoot: any): WingBus[] {
       for (const [routeType, routeObject] of Object.entries(busRoutes)) {
         if (typeof routeObject !== "object" || routeObject === null) continue;
         for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
-          if (toBoolean(routeValue)) {
             const routeIndex = parseInt(routeIndexStr, 10);
             if (!isNaN(routeIndex)) {
-              bus.routes.push({
+              const route = {
                 destination: routeType as "matrix" | "output",
                 group: routeType,
                 index: routeIndex,
-              });
+              };
+              if (toBoolean(routeValue)) bus.routes.push(route);
+              else bus.offRoutes.push(route);
             }
-          }
         }
       }
     }
@@ -416,6 +447,7 @@ function parseMatrices(dataRoot: any): WingMatrix[] {
       name: (mtxItem as any).name || `Matrix ${index}`,
       isMono: toBoolean((mtxItem as any).mtxmono),
       routes: [],
+      offRoutes: [],
       gain: toNumber((mtxItem as any).gain),
       mute: toBoolean((mtxItem as any).mute),
     };
@@ -426,16 +458,16 @@ function parseMatrices(dataRoot: any): WingMatrix[] {
       for (const [routeType, routeObject] of Object.entries(mtxRoutes)) {
         if (typeof routeObject !== "object" || routeObject === null) continue;
         for (const [routeIndexStr, routeValue] of Object.entries(routeObject)) {
-          if (toBoolean(routeValue)) {
             const routeIndex = parseInt(routeIndexStr, 10);
             if (!isNaN(routeIndex)) {
-              matrix.routes.push({
+              const route = {
                 destination: routeType as "output",
                 group: routeType,
                 index: routeIndex,
-              });
+              };
+              if (toBoolean(routeValue)) matrix.routes.push(route);
+              else matrix.offRoutes.push(route);
             }
-          }
         }
       }
     }
@@ -526,10 +558,12 @@ export function serializeWingSnapshot(snapshot: WingMixerSnapshot): any {
   for (const channel of snapshot.channels) {
     const chRoutes: any = {};
     for (const route of channel.routes) {
-      if (!chRoutes[route.group]) {
-        chRoutes[route.group] = {};
-      }
-      chRoutes[route.group][route.index] = 1; // Assuming 1 for active route
+      if (!chRoutes[route.group]) chRoutes[route.group] = {};
+      chRoutes[route.group][route.index] = 1;
+    }
+    for (const route of channel.offRoutes ?? []) {
+      if (!chRoutes[route.group]) chRoutes[route.group] = {};
+      chRoutes[route.group][route.index] = 0;
     }
 
     output.ae_data.ch[channel.index] = {
@@ -547,10 +581,12 @@ export function serializeWingSnapshot(snapshot: WingMixerSnapshot): any {
   for (const bus of snapshot.buses) {
     const busRoutes: any = {};
     for (const route of bus.routes) {
-      if (!busRoutes[route.group]) {
-        busRoutes[route.group] = {};
-      }
+      if (!busRoutes[route.group]) busRoutes[route.group] = {};
       busRoutes[route.group][route.index] = 1;
+    }
+    for (const route of bus.offRoutes ?? []) {
+      if (!busRoutes[route.group]) busRoutes[route.group] = {};
+      busRoutes[route.group][route.index] = 0;
     }
 
     output.ae_data.bus[bus.index] = {
@@ -566,10 +602,12 @@ export function serializeWingSnapshot(snapshot: WingMixerSnapshot): any {
   for (const matrix of snapshot.matrices) {
     const mtxRoutes: any = {};
     for (const route of matrix.routes) {
-      if (!mtxRoutes[route.group]) {
-        mtxRoutes[route.group] = {};
-      }
+      if (!mtxRoutes[route.group]) mtxRoutes[route.group] = {};
       mtxRoutes[route.group][route.index] = 1;
+    }
+    for (const route of matrix.offRoutes ?? []) {
+      if (!mtxRoutes[route.group]) mtxRoutes[route.group] = {};
+      mtxRoutes[route.group][route.index] = 0;
     }
 
     output.ae_data.mtx[matrix.index] = {
