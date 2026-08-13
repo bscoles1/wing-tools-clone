@@ -216,3 +216,10 @@
 - [x] Replace the vertical organization-chart presentation with a central WING hub and color-coded routing branches.
 - [x] Preserve source labels, selected-path tracing, progressive reveal, and route inspection in the new layout.
 - [x] Add regression coverage and verify the mind-map on desktop and mobile.
+
+## Advanced Signal Flow Navigation
+- [x] Review the mind-map component and define pan, zoom, focus, and filter state models.
+- [x] Add accessible pan and zoom controls for large routing maps.
+- [x] Add a focus selected route mode that isolates the selected signal path.
+- [x] Add per-branch text search and source filtering.
+- [x] Add regression coverage and verify advanced navigation on desktop and mobile.
