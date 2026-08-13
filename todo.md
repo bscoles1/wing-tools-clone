@@ -106,3 +106,12 @@
 - [x] Replace the staged signal flow grid with a centered, branch-based mind map layout.
 - [x] Preserve click-to-expand routing details, node status, and snapshot-driven signal relationships.
 - [x] Verify the redesigned visualization on desktop and mobile viewports.
+
+## Signal Flow Expansion Correction
+- [x] Add controls that progressively reveal every remaining node in an expanded mind map branch.
+- [x] Verify expanded branch pagination or reveal behavior for large I/O groups.
+
+## Signal Flow Organization Chart Redesign
+- [x] Replace the horizontal mind map with a top-down routing organization chart.
+- [x] Preserve expandable grouped branches, progressive reveal, and the route inspector.
+- [x] Verify the vertical diagram is readable on desktop and mobile layouts.
