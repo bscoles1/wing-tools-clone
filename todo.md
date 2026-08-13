@@ -97,7 +97,7 @@
 - [x] Handoff documentation updated with the final status.
 
 ## Reference ZIP Alignment
-- [ ] Download and extract the user-provided reference ZIP from the provided URL.
-- [ ] Inspect files inside the ZIP to identify specific design, UI, or functional requirements.
-- [ ] Align the WingTools clone implementation with any unique specifications from the ZIP.
-- [ ] Verify build, tests, and deliver the final checkpoint.
+- [x] Download and extract the user-provided reference ZIP from the provided URL.
+- [x] Inspect files inside the ZIP to identify specific design, UI, or functional requirements.
+- [x] Align the WingTools clone implementation with any unique specifications from the ZIP.
+- [x] Verify build, tests, and deliver the final checkpoint.
