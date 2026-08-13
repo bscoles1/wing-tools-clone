@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getGroupKeyForNodeType, getNodeGroupLabel, getNodeSourceLabel, getSelectedPathRoles, type SignalFlowNode, type TraceRole } from "@/lib/signalFlowTrace";
 import { trpc } from "@/lib/trpc";
 import {
   ArrowDown,
@@ -16,13 +17,13 @@ import {
   Waypoints,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
 
 type NodeType = "input" | "channel" | "bus" | "matrix" | "output";
 
-type FlowNode = {
+export type FlowNode = SignalFlowNode & {
   id: string;
   type: NodeType;
   name: string;
@@ -31,8 +32,6 @@ type FlowNode = {
   gain?: number;
   mute?: boolean;
   solo?: boolean;
-  outgoing: string[];
-  incoming: string[];
 };
 
 const nodeStyles: Record<NodeType, { chip: string; line: string; icon: string; label: string }> = {
@@ -147,6 +146,7 @@ export default function SignalFlowDiagram() {
         type: "channel",
         name: channel.name || `Channel ${channel.index}`,
         index: channel.index,
+        group: channel.group,
         gain: channel.gain,
         mute: channel.mute,
         solo: channel.solo,
@@ -161,6 +161,7 @@ export default function SignalFlowDiagram() {
         type: "bus",
         name: bus.name || `Bus ${bus.index}`,
         index: bus.index,
+        group: bus.group,
         gain: bus.gain,
         mute: bus.mute,
         outgoing: [],
@@ -174,6 +175,7 @@ export default function SignalFlowDiagram() {
         type: "matrix",
         name: matrix.name || `Matrix ${matrix.index}`,
         index: matrix.index,
+        group: matrix.group,
         gain: matrix.gain,
         mute: matrix.mute,
         outgoing: [],
@@ -221,6 +223,19 @@ export default function SignalFlowDiagram() {
   }, [nodeMap]);
 
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
+  const traceRoles = useMemo(() => getSelectedPathRoles(nodeMap, selectedNodeId), [nodeMap, selectedNodeId]);
+  const selectNode = (id: string) => {
+    const roles = getSelectedPathRoles(nodeMap, id);
+    setSelectedNodeId(id);
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      for (const nodeId of Array.from(roles.keys())) {
+        const relatedNode = nodeMap.get(nodeId);
+        if (relatedNode) next.add(getGroupKeyForNodeType(relatedNode.type));
+      }
+      return next;
+    });
+  };
   const toggleGroup = (group: string) => {
     setExpandedGroups((current) => {
       const next = new Set(current);
@@ -235,7 +250,7 @@ export default function SignalFlowDiagram() {
 
   const parsed = snapshot.parsed as any;
   const mixerName = parsed.metadata?.mixerName || snapshot.filename?.replace(/\.snap$/i, "") || "WING Console";
-  const groupProps = { nodeMap, selectedNodeId, setSelectedNodeId };
+  const groupProps = { nodeMap, selectedNodeId, traceRoles, setSelectedNodeId: selectNode };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 dark:bg-slate-950">
@@ -256,6 +271,11 @@ export default function SignalFlowDiagram() {
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900">{groups.channels.length} channels</span>
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900">{groups.buses.length + groups.matrices.length} mix destinations</span>
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900">{groups.outputs.length} outputs</span>
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2"><span className="font-semibold text-slate-900 dark:text-white">Path tracing</span><span>Click a node to reveal its full upstream and downstream route.</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Upstream source</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-indigo-500" /> Selected node</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Downstream destination</span></div>
+          {selectedNode && <Button variant="ghost" size="sm" onClick={() => setSelectedNodeId(null)}>Clear focused path</Button>}
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -288,7 +308,7 @@ export default function SignalFlowDiagram() {
             <div className="border-t border-slate-200 bg-white/70 px-6 py-4 text-xs text-slate-500 backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">The organization chart presents the complete routing hierarchy. It groups the live relationships detected in the uploaded `.snap` file; the Route Inspector reveals each node’s exact patch path.</div>
           </Card>
 
-          <RouteInspector node={selectedNode} nodeMap={nodeMap} onClose={() => setSelectedNodeId(null)} />
+          <RouteInspector node={selectedNode} nodeMap={nodeMap} traceRoles={traceRoles} onClose={() => setSelectedNodeId(null)} />
         </div>
       </main>
     </div>
@@ -314,6 +334,7 @@ function OrgChartGroup({
   onToggle,
   nodeMap,
   selectedNodeId,
+  traceRoles,
   setSelectedNodeId,
 }: {
   title: string;
@@ -326,6 +347,7 @@ function OrgChartGroup({
   onToggle: (key: string) => void;
   nodeMap: Map<string, FlowNode>;
   selectedNodeId: string | null;
+  traceRoles: Map<string, TraceRole>;
   setSelectedNodeId: (id: string) => void;
 }) {
   const branchPageSize = 12;
@@ -349,7 +371,7 @@ function OrgChartGroup({
         <div className="relative mx-3 border-x border-b border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/50 sm:mx-6">
           <div className="absolute -top-4 left-1/2 h-4 w-px -translate-x-1/2 bg-indigo-400 dark:bg-indigo-600" />
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleNodes.map((node) => <OrgChartNode key={node.id} node={node} nodeMap={nodeMap} selected={selectedNodeId === node.id} onSelect={setSelectedNodeId} />)}
+            {visibleNodes.map((node) => <OrgChartNode key={node.id} node={node} nodeMap={nodeMap} selected={selectedNodeId === node.id} pathRole={traceRoles.get(node.id)} hasActiveTrace={traceRoles.size > 0} onSelect={setSelectedNodeId} />)}
           </div>
           {remainingNodes > 0 && (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
@@ -364,17 +386,27 @@ function OrgChartGroup({
   );
 }
 
-function OrgChartNode({ node, nodeMap, selected, onSelect }: { node: FlowNode; nodeMap: Map<string, FlowNode>; selected: boolean; onSelect: (id: string) => void }) {
+export function OrgChartNode({ node, nodeMap, selected, pathRole, hasActiveTrace, onSelect }: { node: FlowNode; nodeMap: Map<string, FlowNode>; selected: boolean; pathRole?: TraceRole; hasActiveTrace: boolean; onSelect: (id: string) => void }) {
   const style = nodeStyles[node.type];
   const connectionCount = node.incoming.length + node.outgoing.length;
+  const traceStyle = pathRole === "selected"
+    ? "ring-2 ring-indigo-500 ring-offset-2 shadow-lg shadow-indigo-500/20 dark:ring-offset-slate-950"
+    : pathRole === "upstream"
+      ? "border-emerald-400 bg-emerald-100/80 shadow-md shadow-emerald-500/10 dark:border-emerald-500 dark:bg-emerald-950/80"
+      : pathRole === "downstream"
+        ? "border-sky-400 bg-sky-100/80 shadow-md shadow-sky-500/10 dark:border-sky-500 dark:bg-sky-950/80"
+        : hasActiveTrace
+          ? "opacity-40"
+          : "hover:-translate-y-0.5 hover:shadow-md";
   return (
-    <button onClick={() => onSelect(node.id)} title={`${node.name}: ${nodeSummary(node)}`} className={`relative rounded-xl border p-3 text-left shadow-sm transition ${style.chip} ${selected ? "ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-950" : "hover:-translate-y-0.5 hover:shadow-md"}`}>
+    <button onClick={() => onSelect(node.id)} title={`${node.name}: ${nodeSummary(node)}`} className={`relative rounded-xl border p-3 text-left shadow-sm transition ${style.chip} ${traceStyle}`}>
       <span className={`absolute left-1/2 top-0 h-2 w-px -translate-x-1/2 -translate-y-2 ${style.line}`} />
       <div className="flex items-start gap-2">
         <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.icon}`} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold">{node.name}</span>
           <span className="mt-0.5 block truncate text-[11px] opacity-70">{nodeSummary(node)}</span>
+          <span className="mt-2 flex flex-wrap gap-1 text-[10px] font-semibold"><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">Group · {getNodeGroupLabel(node)}</span><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">{getNodeSourceLabel(node, nodeMap)}</span></span>
         </span>
         {connectionCount > 0 && <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-bold dark:bg-white/10">{connectionCount}</span>}
       </div>
@@ -382,7 +414,7 @@ function OrgChartNode({ node, nodeMap, selected, onSelect }: { node: FlowNode; n
   );
 }
 
-function RouteInspector({ node, nodeMap, onClose }: { node: FlowNode | null; nodeMap: Map<string, FlowNode>; onClose: () => void }) {
+function RouteInspector({ node, nodeMap, traceRoles, onClose }: { node: FlowNode | null; nodeMap: Map<string, FlowNode>; traceRoles: Map<string, TraceRole>; onClose: () => void }) {
   if (!node) {
     return <Card className="flex min-h-[320px] flex-col items-center justify-center border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><Headphones className="h-10 w-10 text-indigo-400" /><h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Route Inspector</h2><p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Select a node in the organization chart to see its live inbound and outbound routing connections.</p></Card>;
   }
@@ -391,7 +423,8 @@ function RouteInspector({ node, nodeMap, onClose }: { node: FlowNode | null; nod
   return (
     <Card className="h-fit border-slate-200 p-5 dark:border-slate-800">
       <div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 rounded-full ${style.icon}`} /><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{style.label.slice(0, -1)}</p><h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{node.name}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{nodeSummary(node)}</p></div></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close route inspector"><X className="h-4 w-4" /></Button></div>
-      <div className="mt-5 grid grid-cols-2 gap-3 text-xs"><InfoTile label="Gain / level" value={node.gain === undefined ? "—" : `${node.gain.toFixed(1)} dB`} /><InfoTile label="Status" value={node.mute ? "Muted" : node.solo ? "Solo" : "Active"} alert={Boolean(node.mute)} /></div>
+      <div className="mt-5 grid grid-cols-2 gap-3 text-xs"><InfoTile label="Group" value={getNodeGroupLabel(node)} /><InfoTile label="Source" value={getNodeSourceLabel(node, nodeMap)} /><InfoTile label="Gain / level" value={node.gain === undefined ? "—" : `${node.gain.toFixed(1)} dB`} /><InfoTile label="Status" value={node.mute ? "Muted" : node.solo ? "Solo" : "Active"} alert={Boolean(node.mute)} /></div>
+      <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"><span className="font-semibold">Focused path:</span> {Array.from(traceRoles.values()).filter((role) => role === "upstream").length} upstream and {Array.from(traceRoles.values()).filter((role) => role === "downstream").length} downstream nodes highlighted in the chart.</div>
       <RouteList title="Upstream connections" empty="No upstream route found" nodes={routes(node.incoming)} />
       <RouteList title="Downstream connections" empty="No downstream route found" nodes={routes(node.outgoing)} />
     </Card>

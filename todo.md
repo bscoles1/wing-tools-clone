@@ -137,3 +137,13 @@
 - [x] Add post-upload documentation deliverable actions and guidance beyond the upload workflow.
 - [x] Add linter remediation guidance for common production issues.
 - [x] Document which live-reference patterns were adopted and which are intentionally deferred.
+
+## Signal Flow Context and Path Tracing
+- [x] Review the organization-chart data model to define source, group, and selected-path relationships.
+- [x] Add source and group labels to the Signal Flow visualization.
+- [x] Add selected-path tracing with clear focused and muted states.
+- [x] Add regression coverage and verify the enhanced diagram on desktop and mobile.
+
+## Signal Flow UI-Level Verification
+- [x] Add a component-level regression test for source/group labels and selected-path visual states.
+- [x] Record the responsive verification outcome for the desktop and mobile Signal Flow controls.
