@@ -127,3 +127,13 @@
 
 ## Snapshot Linter Interactive Verification
 - [x] Add and run an interactive UI test proving Show more and Show all reveal every affected signal.
+
+## Live Reference Site Improvements
+- [x] Explore the live WingTools site and document its public workflows and interaction patterns.
+- [x] Compare the live reference with the current clone and select practical improvements.
+- [x] Implement and verify selected improvements inspired by the reference workflows.
+
+## Extended Live Reference Workflow Improvements
+- [x] Add post-upload documentation deliverable actions and guidance beyond the upload workflow.
+- [x] Add linter remediation guidance for common production issues.
+- [x] Document which live-reference patterns were adopted and which are intentionally deferred.

@@ -5,7 +5,8 @@ import { AffectedSignalList } from "@/components/AffectedSignalList";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { LintIssue, lintSnapshot } from "@/lib/snapshotLinter";
-import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { getLintRemediation } from "@/lib/linterRemediation";
+import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Info, Wrench } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -185,6 +186,10 @@ export default function SnapshotLinter() {
                         </span>
                       </div>
                       <p className="text-slate-700 dark:text-slate-300 mt-1">{issue.message}</p>
+                      <div className="mt-3 flex gap-2 rounded-md border border-slate-200/80 bg-white/60 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/30 dark:text-slate-200">
+                        <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                        <div><span className="font-semibold">Recommended next step:</span> {getLintRemediation(issue.rule)}</div>
+                      </div>
                       <AffectedSignalList items={issue.affectedItems} />
                     </div>
                   </div>

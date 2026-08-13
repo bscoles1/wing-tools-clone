@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Trash2, Download, Share2, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings } from "lucide-react";
+import { Loader2, Trash2, Download, ClipboardCopy, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings, FileSpreadsheet, Tags, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -110,6 +110,15 @@ export default function SnapshotDetail() {
     }
   };
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Snapshot link copied to clipboard.");
+    } catch {
+      toast.error("Could not copy the snapshot link. Please copy the address from your browser.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
@@ -170,9 +179,16 @@ export default function SnapshotDetail() {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="mt-8 flex flex-col gap-4">
-              <div className="flex gap-2">
+            {/* Documentation actions */}
+            <div id="exports" className="mt-8 rounded-xl border border-indigo-200 bg-indigo-50/70 p-5 dark:border-indigo-800 dark:bg-indigo-950/30">
+              <div className="flex items-start gap-3">
+                <FileJson className="mt-0.5 h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Documentation Deliverables</h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Create a routing report for your crew or a filterable workbook for engineering handoff. The PDF includes routing tables, cross-references, and stagebox-label information.</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button
                   onClick={() => generatePDFMutation.mutate({ snapshotId })}
                   disabled={generatePDFMutation.isPending}
@@ -182,9 +198,10 @@ export default function SnapshotDetail() {
                   ) : (
                     <Download className="w-4 h-4 mr-2" />
                   )}
-                  Download PDF
+                  Routing PDF
                 </Button>
                 <Button
+                  variant="outline"
                   onClick={() => generateExcelMutation.mutate({ snapshotId })}
                   disabled={generateExcelMutation.isPending}
                 >
@@ -193,12 +210,11 @@ export default function SnapshotDetail() {
                   ) : (
                     <Download className="w-4 h-4 mr-2" />
                   )}
-                  Download Excel
+                  Excel Workbook
                 </Button>
+                <span className="flex items-center gap-1.5 self-center text-xs font-medium text-slate-600 dark:text-slate-300"><Tags className="h-3.5 w-3.5" /> Stagebox labels are included in the PDF report</span>
               </div>
-              <Button variant="outline">
-                <Share2 className="w-4 h-4 mr-2" /> Share
-              </Button>
+              <Button className="mt-3" variant="ghost" size="sm" onClick={handleCopyLink}><ClipboardCopy className="mr-2 h-4 w-4" /> Copy snapshot link</Button>
             </div>
           </Card>
 
@@ -206,7 +222,7 @@ export default function SnapshotDetail() {
           <Card className="p-6 border-slate-200 dark:border-slate-800">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Available Tools</h2>
             <div className="space-y-4">
-              <Button className="w-full justify-start" variant="ghost">
+              <Button className="w-full justify-start" variant="ghost" onClick={() => document.getElementById("exports")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
                 <FileJson className="w-5 h-5 mr-2" /> Routing Table Generator
               </Button>
               <Button
@@ -237,6 +253,10 @@ export default function SnapshotDetail() {
               >
                 <Settings className="w-5 h-5 mr-2" /> Source Management
               </Button>
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Recommended pre-show sequence</div>
+                <p className="mt-1">Run the linter, trace critical paths in Signal Flow, then download the routing report and Excel workbook.</p>
+              </div>
             </div>
           </Card>
         </div>
