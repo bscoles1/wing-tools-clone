@@ -3,16 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { LintIssue, lintSnapshot } from "@/lib/snapshotLinter";
 import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Info } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-
-interface LintIssue {
-  severity: "error" | "warning" | "info";
-  rule: string;
-  message: string;
-  affectedItems: string[];
-}
 
 export default function SnapshotLinter() {
   const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
@@ -23,6 +17,7 @@ export default function SnapshotLinter() {
   const [issues, setIssues] = useState<LintIssue[]>([]);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const { data: snapshot, isLoading: isSnapshotLoading, error: snapshotError } = trpc.snapshot.getSnapshot.useQuery(
     { snapshotId },
@@ -39,6 +34,34 @@ export default function SnapshotLinter() {
       setLocation("/uploader");
     }
   }, [snapshotError, setLocation]);
+
+  const runAnalysis = useCallback((parsedSnapshot: unknown, announce = true) => {
+    setIsAnalyzing(true);
+    try {
+      const foundIssues = lintSnapshot(parsedSnapshot);
+      setIssues(foundIssues);
+      setHasAnalyzed(true);
+      requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+
+      if (announce && foundIssues.length === 0) {
+        toast.success("No issues found! Your configuration looks good.");
+      } else if (announce) {
+        const errorCount = foundIssues.filter((issue) => issue.severity === "error").length;
+        const warningCount = foundIssues.filter((issue) => issue.severity === "warning").length;
+        toast.success(`Analysis complete: ${errorCount} error(s), ${warningCount} warning(s)`);
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      toast.error("Failed to analyze snapshot");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!snapshot?.parsed || hasAnalyzed) return;
+    runAnalysis(snapshot.parsed, false);
+  }, [snapshot?.id, snapshot?.parsed, hasAnalyzed, runAnalysis]);
 
   if (loading || !isAuthenticated || isNaN(snapshotId)) {
     return (
@@ -61,154 +84,7 @@ export default function SnapshotLinter() {
     return null;
   }
 
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    const parsed = snapshot.parsed;
-    const foundIssues: LintIssue[] = [];
-
-    try {
-      // Rule 1: Check for unpatched channels (channels with no input source)
-      const unpatchedChannels = parsed.channels.filter((ch: any) => !ch.inputSource);
-      if (unpatchedChannels.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "Unpatched Channels",
-          message: `${unpatchedChannels.length} channel(s) have no input source assigned`,
-          affectedItems: unpatchedChannels.map((ch: any) => ch.name),
-        });
-      }
-
-      // Rule 2: Check for channels with no routes
-      const unroutedChannels = parsed.channels.filter((ch: any) => ch.routes.length === 0);
-      if (unroutedChannels.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "Unrouted Channels",
-          message: `${unroutedChannels.length} channel(s) have no output routes`,
-          affectedItems: unroutedChannels.map((ch: any) => ch.name),
-        });
-      }
-
-      // Rule 3: Check for muted channels that have routes
-      const mutedRoutedChannels = parsed.channels.filter((ch: any) => ch.mute && ch.routes.length > 0);
-      if (mutedRoutedChannels.length > 0) {
-        foundIssues.push({
-          severity: "info",
-          rule: "Muted Routed Channels",
-          message: `${mutedRoutedChannels.length} channel(s) are muted but have active routes`,
-          affectedItems: mutedRoutedChannels.map((ch: any) => ch.name),
-        });
-      }
-
-      // Rule 4: Check for buses with no routes
-      const unroutedBuses = parsed.buses.filter((b: any) => b.routes.length === 0);
-      if (unroutedBuses.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "Unrouted Buses",
-          message: `${unroutedBuses.length} bus(es) have no output routes`,
-          affectedItems: unroutedBuses.map((b: any) => b.name),
-        });
-      }
-
-      // Rule 5: Check for buses that receive no active channel sends.
-      const busesWithoutSends = parsed.buses.filter((bus: any) =>
-        !parsed.channels.some((channel: any) =>
-          channel.routes.some((route: any) => route.destination === "bus" && route.index === bus.index)
-        )
-      );
-      if (busesWithoutSends.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "Missing Bus Sends",
-          message: `${busesWithoutSends.length} bus(es) have no active channel sends`,
-          affectedItems: busesWithoutSends.map((bus: any) => bus.name),
-        });
-      }
-
-      // Rule 6: Check for matrices with no routes
-      const unroutedMatrices = parsed.matrices.filter((m: any) => m.routes.length === 0);
-      if (unroutedMatrices.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "Unrouted Matrices",
-          message: `${unroutedMatrices.length} matrix(ces) have no output routes`,
-          affectedItems: unroutedMatrices.map((m: any) => m.name),
-        });
-      }
-
-      // Rule 7: Check for explicit OFF route entries in the snapshot.
-      const offRouteItems = [
-        ...parsed.channels.flatMap((channel: any) => (channel.offRoutes ?? []).map((route: any) => `${channel.name} → ${route.group} ${route.index}`)),
-        ...parsed.buses.flatMap((bus: any) => (bus.offRoutes ?? []).map((route: any) => `${bus.name} → ${route.group} ${route.index}`)),
-        ...parsed.matrices.flatMap((matrix: any) => (matrix.offRoutes ?? []).map((route: any) => `${matrix.name} → ${route.group} ${route.index}`)),
-      ];
-      if (offRouteItems.length > 0) {
-        foundIssues.push({
-          severity: "info",
-          rule: "OFF Routes",
-          message: `${offRouteItems.length} route(s) are explicitly OFF`,
-          affectedItems: offRouteItems,
-        });
-      }
-
-      // Rule 8: Check for unused inputs (inputs not connected to any channel)
-      const usedInputs = new Set<string>();
-      for (const ch of parsed.channels as any[]) {
-        if (ch.inputSource) {
-          usedInputs.add(`${ch.inputSource.group}${ch.inputSource.index}`);
-        }
-      }
-
-      const unusedInputs = parsed.inputs.filter((inp: any) => !usedInputs.has(`${inp.group}${inp.index}`));
-      if (unusedInputs.length > 0) {
-        foundIssues.push({
-          severity: "info",
-          rule: "Unused Inputs",
-          message: `${unusedInputs.length} input(s) are not connected to any channel`,
-          affectedItems: unusedInputs.map((inp: any) => `${inp.group} #${inp.index} - ${inp.name}`),
-        });
-      }
-
-      // Rule 9: Check for high gain values (potential clipping)
-      const highGainChannels = parsed.channels.filter((ch: any) => (ch.gain || 0) > 6);
-      if (highGainChannels.length > 0) {
-        foundIssues.push({
-          severity: "warning",
-          rule: "High Gain Levels",
-          message: `${highGainChannels.length} channel(s) have gain > 6dB (potential clipping)`,
-          affectedItems: highGainChannels.map((ch: any) => `${ch.name} (${ch.gain?.toFixed(1)}dB)`),
-        });
-      }
-
-      // Rule 10: Check for solo enabled on multiple channels
-      const soloChannels = parsed.channels.filter((ch: any) => ch.solo);
-      if (soloChannels.length > 1) {
-        foundIssues.push({
-          severity: "info",
-          rule: "Multiple Solo Channels",
-          message: `${soloChannels.length} channel(s) have solo enabled`,
-          affectedItems: soloChannels.map((ch: any) => ch.name),
-        });
-      }
-
-      setIssues(foundIssues);
-      setHasAnalyzed(true);
-
-      if (foundIssues.length === 0) {
-        toast.success("No issues found! Your configuration looks good.");
-      } else {
-        const errorCount = foundIssues.filter((i) => i.severity === "error").length;
-        const warningCount = foundIssues.filter((i) => i.severity === "warning").length;
-        toast.success(`Analysis complete: ${errorCount} error(s), ${warningCount} warning(s)`);
-      }
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      toast.error("Failed to analyze snapshot");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  const handleAnalyze = () => runAnalysis(snapshot.parsed);
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
@@ -254,7 +130,7 @@ export default function SnapshotLinter() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Analysis Button */}
-        <Card className="p-6 mb-8 border-slate-200 dark:border-slate-800">
+        <Card ref={resultsRef} className="p-6 mb-8 border-slate-200 dark:border-slate-800">
           <Button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full">
             {isAnalyzing ? (
               <>

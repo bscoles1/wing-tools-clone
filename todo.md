@@ -115,3 +115,8 @@
 - [x] Replace the horizontal mind map with a top-down routing organization chart.
 - [x] Preserve expandable grouped branches, progressive reveal, and the route inspector.
 - [x] Verify the vertical diagram is readable on desktop and mobile layouts.
+
+## Snapshot Linter Repair
+- [x] Diagnose why Snapshot Linter analysis is not running or rendering results.
+- [x] Repair linter rule execution and result display against uploaded snapshots.
+- [x] Add regression coverage and verify the linter workflow.
