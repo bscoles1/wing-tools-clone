@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Trash2, Download, ClipboardCopy, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings, FileSpreadsheet, Tags, ShieldCheck } from "lucide-react";
+import { Loader2, Trash2, Download, ClipboardCopy, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings, FileSpreadsheet, Tags, ShieldCheck, Network } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -252,6 +252,9 @@ export default function SnapshotDetail() {
                 onClick={() => setLocation(`/snapshot/${snapshotId}/source-management`)}
               >
                 <Settings className="w-5 h-5 mr-2" /> Source Management
+              </Button>
+              <Button className="w-full justify-start" variant="ghost" onClick={() => setLocation("/protocol-explorer")}>
+                <Network className="w-5 h-5 mr-2" /> Remote Protocol Explorer
               </Button>
               <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Recommended pre-show sequence</div>

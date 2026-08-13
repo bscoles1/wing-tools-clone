@@ -9,6 +9,7 @@ import SignalFlowDiagram from "@/pages/SignalFlowDiagram";
 import RoutingDiff from "@/pages/RoutingDiff";
 import SnapshotLinter from "@/pages/SnapshotLinter";
 import SourceManagement from "@/pages/SourceManagement";
+import ProtocolExplorer from "@/pages/ProtocolExplorer";
 import NotFound from "@/pages/NotFound";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +32,8 @@ function AppContent() {
       setLocation("/uploader");
     } else if (page === "routing-diff") {
       setLocation("/routing-diff");
+    } else if (page === "protocol-explorer") {
+      setLocation("/protocol-explorer");
     } else {
       setLocation("/manual");
     }
@@ -68,6 +71,7 @@ function AppContent() {
             <Route path={"/snapshot/:id"} component={SnapshotDetail} />
             <Route path={"/snapshot/:id/signal-flow"} component={SignalFlowDiagram} />
             <Route path={"/routing-diff"} component={RoutingDiff} />
+            <Route path={"/protocol-explorer"} component={ProtocolExplorer} />
             <Route path={"/snapshot/:id/linter"} component={SnapshotLinter} />
             <Route path={"/snapshot/:id/source-management"} component={SourceManagement} />
             <Route path={"/manual"}>
@@ -82,7 +86,7 @@ function AppContent() {
                     "getting-started", "my-files", "projects", "routing-generator",
                     "signal-flow", "routing-diff", "account-management", "snapshot-linter",
                     "source-tags", "multi-mixer", "source-management", "snapshot-generator",
-                    "referrals", "wingpt", "documenting-routing", "pre-show-checklist"
+                    "referrals", "wingpt", "protocol-explorer", "documenting-routing", "pre-show-checklist"
                   ].includes(location.replace("/", ""))
                 ) {
                   return <UserManual currentPage={location.replace("/", "") as Page} onNavigate={handleNavigate} />;

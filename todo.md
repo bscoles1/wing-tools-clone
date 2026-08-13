@@ -147,3 +147,15 @@
 ## Signal Flow UI-Level Verification
 - [x] Add a component-level regression test for source/group labels and selected-path visual states.
 - [x] Record the responsive verification outcome for the desktop and mobile Signal Flow controls.
+
+## WING Remote Protocols Augmentation
+- [x] Review the attached WING Remote Protocols document and catalog reusable protocol concepts and visual assets.
+- [x] Select protocol-driven improvements that complement the current snapshot and routing tools.
+- [x] Add a protocol explorer with remote-channel reference, connection lifecycle guidance, and the supplied data-tree visual.
+- [x] Add snapshot-driven OSC channel command previews with copy support and regression coverage.
+- [x] Add application navigation to the protocol explorer and protocol-aware entry points.
+- [x] Implement, test, and visually verify the selected protocol-informed capabilities.
+
+## Protocol Explorer UI-Level Verification
+- [x] Add a component-level regression test for snapshot-derived OSC previews and copy behavior.
+- [x] Record desktop and mobile verification outcomes for the protocol explorer’s facts, visual, and command layout.

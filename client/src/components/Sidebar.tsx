@@ -2,7 +2,7 @@ import React from "react";
 import { 
   FileText, Home, Upload, Layers, GitCompare, AlertCircle, Sliders, 
   BookOpen, HelpCircle, Shield, Cpu, ExternalLink, Mail, FolderOpen,
-  Settings, CheckSquare, Sparkles, UserCheck, MessageSquare
+  Settings, CheckSquare, Sparkles, UserCheck, MessageSquare, Network
 } from "lucide-react";
 
 export type Page =
@@ -25,6 +25,7 @@ export type Page =
   | "snapshot-generator"
   | "referrals"
   | "wingpt"
+  | "protocol-explorer"
   | "documenting-routing"
   | "pre-show-checklist";
 
@@ -51,6 +52,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: SidebarPro
     { id: "snapshot-generator", label: "Snapshot Generator", icon: Sparkles },
     { id: "referrals", label: "Referral Program", icon: UserCheck },
     { id: "wingpt", label: "WinGPT Assistant", icon: MessageSquare },
+    { id: "protocol-explorer", label: "Remote Protocol Explorer", icon: Network },
   ];
 
   const guides = [
