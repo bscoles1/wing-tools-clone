@@ -209,3 +209,10 @@
 - [x] Define a consistent source-label format with meaningful fallbacks for every routing entity.
 - [x] Show source information for inputs, channels, buses, matrices, and outputs in the routing-focused views.
 - [x] Add regression coverage and verify the source-aware layouts on desktop and mobile.
+
+## Signal Flow Mind-Map Redesign
+- [x] Review the current Signal Flow chart and translate the supplied mind-map structure into routing branches.
+- [x] Design a central WING hub, color-coded routing branches, and progressive reveal interactions.
+- [x] Replace the vertical organization-chart presentation with a central WING hub and color-coded routing branches.
+- [x] Preserve source labels, selected-path tracing, progressive reveal, and route inspection in the new layout.
+- [x] Add regression coverage and verify the mind-map on desktop and mobile.

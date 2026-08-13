@@ -3,25 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getGroupKeyForNodeType, getNodeGroupLabel, getNodeSourceLabel, getSelectedPathRoles, type SignalFlowNode, type TraceRole } from "@/lib/signalFlowTrace";
 import { trpc } from "@/lib/trpc";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ChevronDown,
-  ChevronRight,
-  CircleDot,
-  Headphones,
-  Layers3,
-  Loader2,
-  Radio,
-  Speaker,
-  Waypoints,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, CircleDot, Headphones, Layers3, Loader2, Radio, Speaker, Waypoints, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
 
 type NodeType = "input" | "channel" | "bus" | "matrix" | "output";
+type MindMapBranchKey = "inputs" | "channels" | "buses" | "matrices" | "outputs";
 
 export type FlowNode = SignalFlowNode & {
   id: string;
@@ -35,37 +23,28 @@ export type FlowNode = SignalFlowNode & {
 };
 
 const nodeStyles: Record<NodeType, { chip: string; line: string; icon: string; label: string }> = {
-  input: {
-    chip: "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-100",
-    line: "bg-emerald-300 dark:bg-emerald-700",
-    icon: "bg-emerald-500",
-    label: "Inputs",
-  },
-  channel: {
-    chip: "border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100",
-    line: "bg-blue-300 dark:bg-blue-700",
-    icon: "bg-blue-500",
-    label: "Channels",
-  },
-  bus: {
-    chip: "border-violet-200 bg-violet-50 text-violet-950 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100",
-    line: "bg-violet-300 dark:bg-violet-700",
-    icon: "bg-violet-500",
-    label: "Buses",
-  },
-  matrix: {
-    chip: "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-100",
-    line: "bg-amber-300 dark:bg-amber-700",
-    icon: "bg-amber-500",
-    label: "Matrices",
-  },
-  output: {
-    chip: "border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-100",
-    line: "bg-rose-300 dark:bg-rose-700",
-    icon: "bg-rose-500",
-    label: "Outputs",
-  },
+  input: { chip: "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-100", line: "bg-emerald-300 dark:bg-emerald-700", icon: "bg-emerald-500", label: "Inputs" },
+  channel: { chip: "border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100", line: "bg-blue-300 dark:bg-blue-700", icon: "bg-blue-500", label: "Channels" },
+  bus: { chip: "border-violet-200 bg-violet-50 text-violet-950 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100", line: "bg-violet-300 dark:bg-violet-700", icon: "bg-violet-500", label: "Buses" },
+  matrix: { chip: "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-100", line: "bg-amber-300 dark:bg-amber-700", icon: "bg-amber-500", label: "Matrices" },
+  output: { chip: "border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-100", line: "bg-rose-300 dark:bg-rose-700", icon: "bg-rose-500", label: "Outputs" },
 };
+
+const branchStyles: Record<NodeType, { header: string; connector: string; halo: string }> = {
+  input: { header: "border-emerald-400/50 bg-emerald-500/15 text-emerald-50 hover:bg-emerald-500/20", connector: "bg-emerald-400", halo: "shadow-emerald-500/15" },
+  channel: { header: "border-blue-400/50 bg-blue-500/15 text-blue-50 hover:bg-blue-500/20", connector: "bg-blue-400", halo: "shadow-blue-500/15" },
+  bus: { header: "border-violet-400/50 bg-violet-500/15 text-violet-50 hover:bg-violet-500/20", connector: "bg-violet-400", halo: "shadow-violet-500/15" },
+  matrix: { header: "border-amber-400/50 bg-amber-500/15 text-amber-50 hover:bg-amber-500/20", connector: "bg-amber-400", halo: "shadow-amber-500/15" },
+  output: { header: "border-rose-400/50 bg-rose-500/15 text-rose-50 hover:bg-rose-500/20", connector: "bg-rose-400", halo: "shadow-rose-500/15" },
+};
+
+export const mindMapBranchLayout: Array<{ key: MindMapBranchKey; type: NodeType; title: string; description: string; mobileOrder: number }> = [
+  { key: "inputs", type: "input", title: "Physical Inputs", description: "Stagebox and local patches feeding the console.", mobileOrder: 2 },
+  { key: "buses", type: "bus", title: "Mix Buses", description: "Aux, monitor, and subgroup destinations.", mobileOrder: 4 },
+  { key: "channels", type: "channel", title: "Mixer Channels", description: "Source-assigned WING channel strips.", mobileOrder: 3 },
+  { key: "matrices", type: "matrix", title: "Matrix Mixes", description: "Zone, broadcast, and matrix feeds.", mobileOrder: 5 },
+  { key: "outputs", type: "output", title: "Physical Outputs", description: "Console, stagebox, and external output patches.", mobileOrder: 6 },
+];
 
 export function getNextVisibleNodeCount(currentCount: number, totalNodes: number, pageSize = 12) {
   return Math.min(totalNodes, currentCount + pageSize);
@@ -73,6 +52,12 @@ export function getNextVisibleNodeCount(currentCount: number, totalNodes: number
 
 export function getVisibleBranchNodes<T>(nodes: T[], expanded: boolean, visibleCount: number) {
   return expanded ? nodes.slice(0, visibleCount) : [];
+}
+
+export function getMindMapBranchSide(key: MindMapBranchKey): "left" | "right" | "bottom" {
+  if (key === "inputs" || key === "channels") return "left";
+  if (key === "buses" || key === "matrices") return "right";
+  return "bottom";
 }
 
 function nodeSummary(node: FlowNode) {
@@ -111,86 +96,17 @@ export default function SignalFlowDiagram() {
 
     const addNode = (node: FlowNode) => nodes.set(node.id, node);
     const outputByIndex = new Map<number, string>();
-
-    for (const input of parsed.inputs ?? []) {
-      addNode({
-        id: `input:${input.group}:${input.index}`,
-        type: "input",
-        name: input.name || `${input.group} ${input.index}`,
-        index: input.index,
-        group: input.group,
-        configuredSource: `${input.group} ${input.index}`,
-        gain: input.gain,
-        outgoing: [],
-        incoming: [],
-      });
-    }
-
+    for (const input of parsed.inputs ?? []) addNode({ id: `input:${input.group}:${input.index}`, type: "input", name: input.name || `${input.group} ${input.index}`, index: input.index, group: input.group, configuredSource: `${input.group} ${input.index}`, gain: input.gain, outgoing: [], incoming: [] });
     for (const output of parsed.outputs ?? []) {
       const id = `output:${output.group}:${output.index}`;
       outputByIndex.set(output.index, id);
-      addNode({
-        id,
-        type: "output",
-        name: output.name || `${output.group} ${output.index}`,
-        index: output.index,
-        group: output.group,
-        configuredSource: output.source ? `${output.source.group} ${output.source.index}` : undefined,
-        gain: output.level,
-        outgoing: [],
-        incoming: [],
-      });
+      addNode({ id, type: "output", name: output.name || `${output.group} ${output.index}`, index: output.index, group: output.group, configuredSource: output.source ? `${output.source.group} ${output.source.index}` : undefined, gain: output.level, outgoing: [], incoming: [] });
     }
+    for (const channel of parsed.channels ?? []) addNode({ id: `channel:${channel.index}`, type: "channel", name: channel.name || `Channel ${channel.index}`, index: channel.index, group: channel.group, configuredSource: channel.inputSource ? `${channel.inputSource.group} ${channel.inputSource.index}` : undefined, gain: channel.gain, mute: channel.mute, solo: channel.solo, outgoing: [], incoming: [] });
+    for (const bus of parsed.buses ?? []) addNode({ id: `bus:${bus.index}`, type: "bus", name: bus.name || `Bus ${bus.index}`, index: bus.index, group: bus.group, gain: bus.gain, mute: bus.mute, outgoing: [], incoming: [] });
+    for (const matrix of parsed.matrices ?? []) addNode({ id: `matrix:${matrix.index}`, type: "matrix", name: matrix.name || `Matrix ${matrix.index}`, index: matrix.index, group: matrix.group, gain: matrix.gain, mute: matrix.mute, outgoing: [], incoming: [] });
 
-    for (const channel of parsed.channels ?? []) {
-      addNode({
-        id: `channel:${channel.index}`,
-        type: "channel",
-        name: channel.name || `Channel ${channel.index}`,
-        index: channel.index,
-        group: channel.group,
-        configuredSource: channel.inputSource ? `${channel.inputSource.group} ${channel.inputSource.index}` : undefined,
-        gain: channel.gain,
-        mute: channel.mute,
-        solo: channel.solo,
-        outgoing: [],
-        incoming: [],
-      });
-    }
-
-    for (const bus of parsed.buses ?? []) {
-      addNode({
-        id: `bus:${bus.index}`,
-        type: "bus",
-        name: bus.name || `Bus ${bus.index}`,
-        index: bus.index,
-        group: bus.group,
-        gain: bus.gain,
-        mute: bus.mute,
-        outgoing: [],
-        incoming: [],
-      });
-    }
-
-    for (const matrix of parsed.matrices ?? []) {
-      addNode({
-        id: `matrix:${matrix.index}`,
-        type: "matrix",
-        name: matrix.name || `Matrix ${matrix.index}`,
-        index: matrix.index,
-        group: matrix.group,
-        gain: matrix.gain,
-        mute: matrix.mute,
-        outgoing: [],
-        incoming: [],
-      });
-    }
-
-    const targetId = (destination: string, index: number) => {
-      if (destination === "output") return outputByIndex.get(index);
-      return `${destination}:${index}`;
-    };
-
+    const targetId = (destination: string, index: number) => destination === "output" ? outputByIndex.get(index) : `${destination}:${index}`;
     const link = (from: string, to: string | undefined) => {
       if (!to || !nodes.has(from) || !nodes.has(to)) return;
       const fromNode = nodes.get(from)!;
@@ -198,24 +114,17 @@ export default function SignalFlowDiagram() {
       if (!fromNode.outgoing.includes(to)) fromNode.outgoing.push(to);
       if (!toNode.incoming.includes(from)) toNode.incoming.push(from);
     };
-
     for (const channel of parsed.channels ?? []) {
       const id = `channel:${channel.index}`;
       if (channel.inputSource) link(`input:${channel.inputSource.group}:${channel.inputSource.index}`, id);
       for (const route of channel.routes ?? []) link(id, targetId(route.destination, route.index));
     }
-    for (const bus of parsed.buses ?? []) {
-      for (const route of bus.routes ?? []) link(`bus:${bus.index}`, targetId(route.destination, route.index));
-    }
-    for (const matrix of parsed.matrices ?? []) {
-      for (const route of matrix.routes ?? []) link(`matrix:${matrix.index}`, targetId(route.destination, route.index));
-    }
+    for (const bus of parsed.buses ?? []) for (const route of bus.routes ?? []) link(`bus:${bus.index}`, targetId(route.destination, route.index));
+    for (const matrix of parsed.matrices ?? []) for (const route of matrix.routes ?? []) link(`matrix:${matrix.index}`, targetId(route.destination, route.index));
     for (const output of parsed.outputs ?? []) {
       const sourceGroup = String(output.source?.group || "").toLowerCase();
       const sourceType = sourceGroup === "mtx" ? "matrix" : sourceGroup === "ch" ? "channel" : sourceGroup;
-      if (["channel", "bus", "matrix"].includes(sourceType) && output.source?.index !== undefined) {
-        link(`${sourceType}:${output.source.index}`, `output:${output.group}:${output.index}`);
-      }
+      if (["channel", "bus", "matrix"].includes(sourceType) && output.source?.index !== undefined) link(`${sourceType}:${output.source.index}`, `output:${output.group}:${output.index}`);
     }
     return nodes;
   }, [snapshot]);
@@ -223,13 +132,7 @@ export default function SignalFlowDiagram() {
   const groups = useMemo(() => {
     const all = Array.from(nodeMap.values());
     const byType = (type: NodeType) => all.filter((node) => node.type === type);
-    return {
-      inputs: byType("input"),
-      channels: byType("channel"),
-      buses: byType("bus"),
-      matrices: byType("matrix"),
-      outputs: byType("output"),
-    };
+    return { inputs: byType("input"), channels: byType("channel"), buses: byType("bus"), matrices: byType("matrix"), outputs: byType("output") };
   }, [nodeMap]);
 
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
@@ -246,21 +149,19 @@ export default function SignalFlowDiagram() {
       return next;
     });
   };
-  const toggleGroup = (group: string) => {
-    setExpandedGroups((current) => {
-      const next = new Set(current);
-      next.has(group) ? next.delete(group) : next.add(group);
-      return next;
-    });
-  };
+  const toggleGroup = (group: string) => setExpandedGroups((current) => {
+    const next = new Set(current);
+    next.has(group) ? next.delete(group) : next.add(group);
+    return next;
+  });
 
   if (loading || !isAuthenticated || !Number.isFinite(snapshotId)) return <LoadingState label="Loading signal flow…" />;
-  if (isSnapshotLoading) return <LoadingState label="Building your routing organization chart…" />;
+  if (isSnapshotLoading) return <LoadingState label="Building your routing mind map…" />;
   if (snapshotError || !snapshot?.parsed) return null;
 
   const parsed = snapshot.parsed as any;
   const mixerName = parsed.metadata?.mixerName || snapshot.filename?.replace(/\.snap$/i, "") || "WING Console";
-  const groupProps = { nodeMap, selectedNodeId, traceRoles, setSelectedNodeId: selectNode };
+  const branchProps = { nodeMap, selectedNodeId, traceRoles, setSelectedNodeId: selectNode };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 dark:bg-slate-950">
@@ -269,8 +170,8 @@ export default function SignalFlowDiagram() {
           <Button variant="ghost" size="icon" onClick={() => setLocation(`/snapshot/${snapshotId}`)} aria-label="Back to snapshot"><ArrowLeft className="h-5 w-5" /></Button>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">Interactive routing explorer</p>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Signal Flow Organization Chart</h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Follow routing top-down from the WING console through sources, channels, mixes, and outputs.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Signal Flow Mind Map</h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Explore every routing domain from the WING console hub, then follow focused paths through sources, mixes, and outputs.</p>
           </div>
         </div>
       </header>
@@ -284,40 +185,28 @@ export default function SignalFlowDiagram() {
         </div>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2"><span className="font-semibold text-slate-900 dark:text-white">Path tracing</span><span>Click a node to reveal its full upstream and downstream route.</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Upstream source</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-indigo-500" /> Selected node</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Downstream destination</span></div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2"><span className="font-semibold text-slate-900 dark:text-white">Path tracing</span><span>Open a branch, then select a node to reveal its full upstream and downstream route.</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Upstream source</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-indigo-500" /> Selected node</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Downstream destination</span></div>
           {selectedNode && <Button variant="ghost" size="sm" onClick={() => setSelectedNodeId(null)}>Clear focused path</Button>}
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <Card className="overflow-hidden border-slate-200 bg-[linear-gradient(180deg,rgba(99,102,241,0.09),transparent_45rem)] p-0 dark:border-slate-800 dark:bg-[linear-gradient(180deg,rgba(99,102,241,0.15),transparent_45rem)]">
-            <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
-              <div className="mx-auto flex max-w-sm flex-col items-center rounded-[2rem] border border-indigo-200 bg-white px-6 py-7 text-center shadow-xl shadow-indigo-500/10 dark:border-indigo-800 dark:bg-slate-900 dark:shadow-indigo-950/40">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/35"><Waypoints className="h-8 w-8" /></div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.15em] text-indigo-600 dark:text-indigo-400">Console hub</p>
-                <h2 className="mt-1 break-words text-xl font-bold text-slate-950 dark:text-white">{mixerName}</h2>
-                <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">Open a stage to reveal its nodes, then select any node for exact upstream and downstream routes.</p>
-              </div>
-
-              <ChartConnector />
-              <OrgChartGroup title="Stage 1 · Physical Input Sources" description="Stagebox and local console inputs feeding the WING channel strips." icon={<Radio className="h-4 w-4" />} groupKey="inputs" nodes={groups.inputs} defaultType="input" expanded={expandedGroups.has("inputs")} onToggle={toggleGroup} {...groupProps} />
-
-              <ChartConnector />
-              <OrgChartGroup title="Stage 2 · Mixer Channels" description="Channel strips whose sources and sends form the core of the mix." icon={<CircleDot className="h-4 w-4" />} groupKey="channels" nodes={groups.channels} defaultType="channel" expanded={expandedGroups.has("channels")} onToggle={toggleGroup} {...groupProps} />
-
-              <ChartConnector />
-              <div className="relative grid gap-5 md:grid-cols-2">
-                <div className="pointer-events-none absolute left-1/2 top-0 hidden h-px w-1/2 -translate-x-full bg-violet-300 dark:bg-violet-700 md:block" />
-                <div className="pointer-events-none absolute right-1/2 top-0 hidden h-px w-1/2 translate-x-full bg-amber-300 dark:bg-amber-700 md:block" />
-                <OrgChartGroup title="Stage 3A · Mix Buses" description="Aux, monitor, and subgroup destinations supplied by channels." icon={<Layers3 className="h-4 w-4" />} groupKey="buses" nodes={groups.buses} defaultType="bus" expanded={expandedGroups.has("buses")} onToggle={toggleGroup} {...groupProps} />
-                <OrgChartGroup title="Stage 3B · Matrix Mixes" description="Matrix destinations and broadcast or zone feeds." icon={<Layers3 className="h-4 w-4" />} groupKey="matrices" nodes={groups.matrices} defaultType="matrix" expanded={expandedGroups.has("matrices")} onToggle={toggleGroup} {...groupProps} />
-              </div>
-
-              <ChartConnector />
-              <OrgChartGroup title="Stage 4 · Physical Outputs" description="Console, stagebox, and external outputs carrying the completed signal path." icon={<Speaker className="h-4 w-4" />} groupKey="outputs" nodes={groups.outputs} defaultType="output" expanded={expandedGroups.has("outputs")} onToggle={toggleGroup} {...groupProps} />
+        <Card className="overflow-hidden border-slate-800 bg-slate-950 p-0 shadow-2xl shadow-slate-950/20">
+          <div className="relative isolate overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-45 [background-image:radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.22)_1px,transparent_0)] [background-size:24px_24px]" />
+            <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-3xl" />
+            <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_15rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_auto] lg:items-center lg:gap-x-8 lg:gap-y-10">
+              <MindMapBranch className="order-2 lg:col-start-1 lg:row-start-1" branchKey="inputs" nodes={groups.inputs} expanded={expandedGroups.has("inputs")} onToggle={toggleGroup} {...branchProps} />
+              <MindMapBranch className="order-4 lg:col-start-3 lg:row-start-1" branchKey="buses" nodes={groups.buses} expanded={expandedGroups.has("buses")} onToggle={toggleGroup} {...branchProps} />
+              <ConsoleHub className="order-1 lg:col-start-2 lg:row-span-2 lg:row-start-1" mixerName={mixerName} />
+              <MindMapBranch className="order-3 lg:col-start-1 lg:row-start-2" branchKey="channels" nodes={groups.channels} expanded={expandedGroups.has("channels")} onToggle={toggleGroup} {...branchProps} />
+              <MindMapBranch className="order-5 lg:col-start-3 lg:row-start-2" branchKey="matrices" nodes={groups.matrices} expanded={expandedGroups.has("matrices")} onToggle={toggleGroup} {...branchProps} />
+              <MindMapBranch className="order-6 lg:col-span-3 lg:row-start-3 lg:mx-auto lg:w-full lg:max-w-3xl" branchKey="outputs" nodes={groups.outputs} expanded={expandedGroups.has("outputs")} onToggle={toggleGroup} {...branchProps} />
             </div>
-            <div className="border-t border-slate-200 bg-white/70 px-6 py-4 text-xs text-slate-500 backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">The organization chart presents the complete routing hierarchy. It groups the live relationships detected in the uploaded `.snap` file; the Route Inspector reveals each node’s exact patch path.</div>
-          </Card>
+          </div>
+          <div className="border-t border-slate-800 bg-slate-900/80 px-6 py-4 text-xs text-slate-300">This mind map groups the routing domains around your console, while the Route Inspector retains the exact live patch data and selected-path relationships.</div>
+        </Card>
 
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Mind-map workflow</p><h2 className="mt-2 text-xl font-bold text-slate-950 dark:text-white">Start from the console, open a routing branch, and follow any selected path.</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">The branch cards show the current source context for every patch. Selecting any input, channel, bus, matrix, or output automatically opens related branches so you can inspect its complete route.</p></div>
           <RouteInspector node={selectedNode} nodeMap={nodeMap} traceRoles={traceRoles} onClose={() => setSelectedNodeId(null)} />
         </div>
       </main>
@@ -329,122 +218,52 @@ function LoadingState({ label }: { label: string }) {
   return <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="h-7 w-7 animate-spin text-indigo-600" /><span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span></div>;
 }
 
-function ChartConnector() {
-  return <div className="flex h-12 flex-col items-center justify-center"><span className="h-7 w-px bg-gradient-to-b from-indigo-300 to-indigo-500 dark:from-indigo-700 dark:to-indigo-500" /><ArrowDown className="h-4 w-4 text-indigo-500" /></div>;
+function ConsoleHub({ mixerName, className }: { mixerName: string; className?: string }) {
+  return <section className={`relative flex flex-col items-center text-center ${className || ""}`} data-testid="mind-map-hub">
+    <div className="absolute h-44 w-44 rounded-full border border-indigo-400/25 bg-indigo-500/10 shadow-[0_0_70px_rgba(99,102,241,0.35)]" />
+    <div className="relative flex min-h-44 w-full max-w-[15rem] flex-col items-center justify-center rounded-[2rem] border border-indigo-300/40 bg-slate-900/90 px-5 py-6 text-white shadow-2xl shadow-indigo-500/20 backdrop-blur">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-600 text-white shadow-lg shadow-indigo-500/30"><Waypoints className="h-7 w-7" /></div>
+      <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300">WING Console</p>
+      <h2 className="mt-1 break-words text-lg font-bold">{mixerName}</h2>
+      <p className="mt-2 text-xs leading-relaxed text-slate-300">Central routing hub</p>
+    </div>
+  </section>;
 }
 
-function OrgChartGroup({
-  title,
-  description,
-  icon,
-  groupKey,
-  nodes,
-  defaultType,
-  expanded,
-  onToggle,
-  nodeMap,
-  selectedNodeId,
-  traceRoles,
-  setSelectedNodeId,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  groupKey: string;
-  nodes: FlowNode[];
-  defaultType: NodeType;
-  expanded: boolean;
-  onToggle: (key: string) => void;
-  nodeMap: Map<string, FlowNode>;
-  selectedNodeId: string | null;
-  traceRoles: Map<string, TraceRole>;
-  setSelectedNodeId: (id: string) => void;
-}) {
-  const branchPageSize = 12;
-  const [visibleCount, setVisibleCount] = useState(branchPageSize);
-  const style = nodeStyles[defaultType];
+function MindMapBranch({ branchKey, nodes, expanded, onToggle, nodeMap, selectedNodeId, traceRoles, setSelectedNodeId, className }: { branchKey: MindMapBranchKey; nodes: FlowNode[]; expanded: boolean; onToggle: (key: string) => void; nodeMap: Map<string, FlowNode>; selectedNodeId: string | null; traceRoles: Map<string, TraceRole>; setSelectedNodeId: (id: string) => void; className?: string }) {
+  const branch = mindMapBranchLayout.find((candidate) => candidate.key === branchKey)!;
+  const [visibleCount, setVisibleCount] = useState(12);
+  const style = branchStyles[branch.type];
   const visibleNodes = getVisibleBranchNodes(nodes, expanded, visibleCount);
   const remainingNodes = Math.max(0, nodes.length - visibleNodes.length);
+  const side = getMindMapBranchSide(branchKey);
 
   return (
-    <section className="relative">
-      <button onClick={() => onToggle(groupKey)} className={`group flex w-full items-center gap-4 rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${style.chip}`}>
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${style.icon}`}>{icon}</span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold sm:text-base">{title}</span>
-          <span className="mt-0.5 block text-xs opacity-70">{description}</span>
-        </span>
-        <span className="flex items-center gap-2 rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold dark:bg-white/10">{nodes.length} {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
+    <section className={`relative ${className || ""}`} data-testid={`mind-map-branch-${branchKey}`}>
+      <div aria-hidden="true" className={`absolute top-1/2 hidden h-px bg-gradient-to-r from-transparent ${style.connector} to-transparent opacity-70 lg:block ${side === "left" ? "-right-8 w-8" : side === "right" ? "-left-8 w-8" : "left-1/2 top-0 h-8 w-px -translate-x-1/2 -translate-y-8 bg-gradient-to-b"}`} />
+      <button type="button" aria-expanded={expanded} onClick={() => onToggle(branchKey)} className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left shadow-xl transition duration-200 hover:-translate-y-0.5 ${style.header} ${style.halo}`}>
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${nodeStyles[branch.type].icon} text-white shadow-sm`}>{branch.type === "input" ? <Radio className="h-4 w-4" /> : branch.type === "channel" ? <CircleDot className="h-4 w-4" /> : branch.type === "output" ? <Speaker className="h-4 w-4" /> : <Layers3 className="h-4 w-4" />}</span>
+        <span className="min-w-0 flex-1"><span className="block text-sm font-bold">{branch.title}</span><span className="mt-0.5 block text-xs text-white/70">{branch.description}</span></span>
+        <span className="flex items-center gap-1 rounded-full bg-black/20 px-2 py-1 text-xs font-bold">{nodes.length}{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
       </button>
-
-      {expanded && (
-        <div className="relative mx-3 border-x border-b border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/50 sm:mx-6">
-          <div className="absolute -top-4 left-1/2 h-4 w-px -translate-x-1/2 bg-indigo-400 dark:bg-indigo-600" />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleNodes.map((node) => <OrgChartNode key={node.id} node={node} nodeMap={nodeMap} selected={selectedNodeId === node.id} pathRole={traceRoles.get(node.id)} hasActiveTrace={traceRoles.size > 0} onSelect={setSelectedNodeId} />)}
-          </div>
-          {remainingNodes > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
-              <button onClick={() => setVisibleCount((count) => getNextVisibleNodeCount(count, nodes.length, branchPageSize))} className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-indigo-700 shadow-sm transition hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-indigo-950">Show {Math.min(branchPageSize, remainingNodes)} more</button>
-              <button onClick={() => setVisibleCount(nodes.length)} className="rounded-full px-3 py-1.5 text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950">Show all {remainingNodes}</button>
-              <span className="text-slate-400 dark:text-slate-500">{visibleNodes.length} of {nodes.length}</span>
-            </div>
-          )}
-        </div>
-      )}
+      {expanded && <div className="mt-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 shadow-xl shadow-black/15 backdrop-blur"><div className="grid gap-2 sm:grid-cols-2">{visibleNodes.map((node) => <OrgChartNode key={node.id} node={node} nodeMap={nodeMap} selected={selectedNodeId === node.id} pathRole={traceRoles.get(node.id)} hasActiveTrace={traceRoles.size > 0} onSelect={setSelectedNodeId} mindMap />)}</div>{remainingNodes > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold"><button type="button" onClick={() => setVisibleCount((count) => getNextVisibleNodeCount(count, nodes.length))} className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-white transition hover:bg-white/20">Show {Math.min(12, remainingNodes)} more</button><button type="button" onClick={() => setVisibleCount(nodes.length)} className="rounded-full px-3 py-1.5 text-indigo-200 transition hover:bg-white/10">Show all {remainingNodes}</button><span className="text-slate-400">{visibleNodes.length} of {nodes.length}</span></div>}</div>}
     </section>
   );
 }
 
-export function OrgChartNode({ node, nodeMap, selected, pathRole, hasActiveTrace, onSelect }: { node: FlowNode; nodeMap: Map<string, FlowNode>; selected: boolean; pathRole?: TraceRole; hasActiveTrace: boolean; onSelect: (id: string) => void }) {
+export function OrgChartNode({ node, nodeMap, selected, pathRole, hasActiveTrace, onSelect, mindMap = false }: { node: FlowNode; nodeMap: Map<string, FlowNode>; selected: boolean; pathRole?: TraceRole; hasActiveTrace: boolean; onSelect: (id: string) => void; mindMap?: boolean }) {
   const style = nodeStyles[node.type];
   const connectionCount = node.incoming.length + node.outgoing.length;
-  const traceStyle = pathRole === "selected"
-    ? "ring-2 ring-indigo-500 ring-offset-2 shadow-lg shadow-indigo-500/20 dark:ring-offset-slate-950"
-    : pathRole === "upstream"
-      ? "border-emerald-400 bg-emerald-100/80 shadow-md shadow-emerald-500/10 dark:border-emerald-500 dark:bg-emerald-950/80"
-      : pathRole === "downstream"
-        ? "border-sky-400 bg-sky-100/80 shadow-md shadow-sky-500/10 dark:border-sky-500 dark:bg-sky-950/80"
-        : hasActiveTrace
-          ? "opacity-40"
-          : "hover:-translate-y-0.5 hover:shadow-md";
-  return (
-    <button onClick={() => onSelect(node.id)} title={`${node.name}: ${nodeSummary(node)}`} className={`relative rounded-xl border p-3 text-left shadow-sm transition ${style.chip} ${traceStyle}`}>
-      <span className={`absolute left-1/2 top-0 h-2 w-px -translate-x-1/2 -translate-y-2 ${style.line}`} />
-      <div className="flex items-start gap-2">
-        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.icon}`} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-bold">{node.name}</span>
-          <span className="mt-0.5 block truncate text-[11px] opacity-70">{nodeSummary(node)}</span>
-          <span className="mt-2 flex flex-wrap gap-1 text-[10px] font-semibold"><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">Group · {getNodeGroupLabel(node)}</span><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">{getNodeSourceLabel(node, nodeMap)}</span></span>
-        </span>
-        {connectionCount > 0 && <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-bold dark:bg-white/10">{connectionCount}</span>}
-      </div>
-    </button>
-  );
+  const traceStyle = pathRole === "selected" ? "ring-2 ring-indigo-500 ring-offset-2 shadow-lg shadow-indigo-500/20 dark:ring-offset-slate-950" : pathRole === "upstream" ? "border-emerald-400 bg-emerald-100/80 shadow-md shadow-emerald-500/10 dark:border-emerald-500 dark:bg-emerald-950/80" : pathRole === "downstream" ? "border-sky-400 bg-sky-100/80 shadow-md shadow-sky-500/10 dark:border-sky-500 dark:bg-sky-950/80" : hasActiveTrace ? "opacity-40" : "hover:-translate-y-0.5 hover:shadow-md";
+  return <button onClick={() => onSelect(node.id)} title={`${node.name}: ${nodeSummary(node)}`} className={`relative rounded-xl border p-3 text-left shadow-sm transition ${style.chip} ${traceStyle}`}><>{!mindMap && <span className={`absolute left-1/2 top-0 h-2 w-px -translate-x-1/2 -translate-y-2 ${style.line}`} />}</><div className="flex items-start gap-2"><span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.icon}`} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{node.name}</span><span className="mt-0.5 block truncate text-[11px] opacity-70">{nodeSummary(node)}</span><span className="mt-2 flex flex-wrap gap-1 text-[10px] font-semibold"><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">Group · {getNodeGroupLabel(node)}</span><span className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">{getNodeSourceLabel(node, nodeMap)}</span></span></span>{connectionCount > 0 && <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-bold dark:bg-white/10">{connectionCount}</span>}</div></button>;
 }
 
 function RouteInspector({ node, nodeMap, traceRoles, onClose }: { node: FlowNode | null; nodeMap: Map<string, FlowNode>; traceRoles: Map<string, TraceRole>; onClose: () => void }) {
-  if (!node) {
-    return <Card className="flex min-h-[320px] flex-col items-center justify-center border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><Headphones className="h-10 w-10 text-indigo-400" /><h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Route Inspector</h2><p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Select a node in the organization chart to see its live inbound and outbound routing connections.</p></Card>;
-  }
+  if (!node) return <Card className="flex min-h-[240px] flex-col items-center justify-center border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><Headphones className="h-10 w-10 text-indigo-400" /><h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Route Inspector</h2><p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Open a branch and select a node in the mind map to see its live inbound and outbound routing connections.</p></Card>;
   const style = nodeStyles[node.type];
   const routes = (ids: string[]) => ids.map((id) => nodeMap.get(id)).filter(Boolean) as FlowNode[];
-  return (
-    <Card className="h-fit border-slate-200 p-5 dark:border-slate-800">
-      <div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 rounded-full ${style.icon}`} /><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{style.label.slice(0, -1)}</p><h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{node.name}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{nodeSummary(node)}</p></div></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close route inspector"><X className="h-4 w-4" /></Button></div>
-      <div className="mt-5 grid grid-cols-2 gap-3 text-xs"><InfoTile label="Group" value={getNodeGroupLabel(node)} /><InfoTile label="Source" value={getNodeSourceLabel(node, nodeMap)} /><InfoTile label="Gain / level" value={node.gain === undefined ? "—" : `${node.gain.toFixed(1)} dB`} /><InfoTile label="Status" value={node.mute ? "Muted" : node.solo ? "Solo" : "Active"} alert={Boolean(node.mute)} /></div>
-      <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"><span className="font-semibold">Focused path:</span> {Array.from(traceRoles.values()).filter((role) => role === "upstream").length} upstream and {Array.from(traceRoles.values()).filter((role) => role === "downstream").length} downstream nodes highlighted in the chart.</div>
-      <RouteList title="Upstream connections" empty="No upstream route found" nodes={routes(node.incoming)} />
-      <RouteList title="Downstream connections" empty="No downstream route found" nodes={routes(node.outgoing)} />
-    </Card>
-  );
+  return <Card className="h-fit border-slate-200 p-5 dark:border-slate-800"><div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 rounded-full ${style.icon}`} /><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{style.label.slice(0, -1)}</p><h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{node.name}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{nodeSummary(node)}</p></div></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close route inspector"><X className="h-4 w-4" /></Button></div><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><InfoTile label="Group" value={getNodeGroupLabel(node)} /><InfoTile label="Source" value={getNodeSourceLabel(node, nodeMap)} /><InfoTile label="Gain / level" value={node.gain === undefined ? "—" : `${node.gain.toFixed(1)} dB`} /><InfoTile label="Status" value={node.mute ? "Muted" : node.solo ? "Solo" : "Active"} alert={Boolean(node.mute)} /></div><div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"><span className="font-semibold">Focused path:</span> {Array.from(traceRoles.values()).filter((role) => role === "upstream").length} upstream and {Array.from(traceRoles.values()).filter((role) => role === "downstream").length} downstream nodes highlighted in the map.</div><RouteList title="Upstream connections" empty="No upstream route found" nodes={routes(node.incoming)} /><RouteList title="Downstream connections" empty="No downstream route found" nodes={routes(node.outgoing)} /></Card>;
 }
 
-function InfoTile({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900"><p className="text-slate-500">{label}</p><p className={`mt-1 font-semibold ${alert ? "text-rose-600" : "text-slate-900 dark:text-white"}`}>{value}</p></div>;
-}
-
-function RouteList({ title, empty, nodes }: { title: string; empty: string; nodes: FlowNode[] }) {
-  return <div className="mt-5"><h3 className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">{title}</h3>{nodes.length === 0 ? <p className="mt-2 text-sm text-slate-500">{empty}</p> : <div className="mt-2 space-y-2">{nodes.map((route) => <div key={route.id} className={`rounded-lg border px-3 py-2 text-sm ${nodeStyles[route.type].chip}`}><p className="font-semibold">{route.name}</p><p className="mt-0.5 text-xs opacity-70">{nodeSummary(route)}</p></div>)}</div>}</div>;
-}
+function InfoTile({ label, value, alert }: { label: string; value: string; alert?: boolean }) { return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900"><p className="text-slate-500">{label}</p><p className={`mt-1 font-semibold ${alert ? "text-rose-600" : "text-slate-900 dark:text-white"}`}>{value}</p></div>; }
+function RouteList({ title, empty, nodes }: { title: string; empty: string; nodes: FlowNode[] }) { return <div className="mt-5"><h3 className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">{title}</h3>{nodes.length === 0 ? <p className="mt-2 text-sm text-slate-500">{empty}</p> : <div className="mt-2 space-y-2">{nodes.map((route) => <div key={route.id} className={`rounded-lg border px-3 py-2 text-sm ${nodeStyles[route.type].chip}`}><p className="font-semibold">{route.name}</p><p className="mt-0.5 text-xs opacity-70">{nodeSummary(route)}</p></div>)}</div>}</div>; }
