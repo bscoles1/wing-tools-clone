@@ -14,6 +14,13 @@ describe("patch-flow graph helpers", () => {
     expect(groups.find((group) => group.id === "channels")?.entities).toEqual([channel]);
   });
 
+  it("can dynamically reflow the same routing inventory into a compact left-to-right topology", () => {
+    const groups = buildPatchFlowGroups(entities, "compact");
+    expect(groups.find((group) => group.id === "inputs:AES50A")?.x).toBeLessThan(groups.find((group) => group.id === "channels")?.x ?? 0);
+    expect(groups.find((group) => group.id === "channels")?.x).toBeLessThan(groups.find((group) => group.id === "buses")?.x ?? 0);
+    expect(groups.find((group) => group.id === "buses")?.x).toBeLessThan(groups.find((group) => group.id === "outputs:AES50A")?.x ?? 0);
+  });
+
   it("filters patch entities by text, source group, and entity type", () => {
     expect(getPatchFlowSourceOptions(entities)).toEqual(["AES50A", "bus", "Unassigned"]);
     expect(filterPatchFlowEntities(entities, "wedge", "all", "all").map((entity) => entity.id)).toEqual([bus.id, output.id]);

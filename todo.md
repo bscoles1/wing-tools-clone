@@ -242,3 +242,9 @@
 - [x] Add a component-level regression test for grouped patch blocks, visible routes, and canvas controls.
 - [x] Add interactive coverage for search, source/type filters, and selected-route focus isolation.
 - [x] Retire or update stale mind-map-specific Signal Flow tests so coverage aligns with the patch-flow canvas.
+
+## Dynamic Patch-Flow Canvas
+- [x] Add dynamic layout controls that reflow routing groups for the current filtered or focused route.
+- [x] Add selectable cable paths with live route statistics and an active-route emphasis mode.
+- [x] Persist canvas view preferences for each snapshot and reset the viewport when the displayed routing set changes.
+- [x] Add regression coverage and responsive validation for dynamic canvas behavior.

@@ -22,6 +22,7 @@ export type PatchFlowGroup = {
   y: number;
 };
 
+export type PatchFlowLayout = "lanes" | "compact";
 export type PatchFlowConnection = { source: string; target: string; sourceGroup: string; targetGroup: string; color: string; active: boolean };
 
 const entityPalette: Record<PatchEntityType, string> = {
@@ -71,7 +72,7 @@ export function limitPatchFlowEntities(entities: PatchFlowEntity[], maximumPerDe
   });
 }
 
-export function buildPatchFlowGroups(entities: PatchFlowEntity[]) {
+export function buildPatchFlowGroups(entities: PatchFlowEntity[], layout: PatchFlowLayout = "lanes") {
   const inputs = entities.filter((entity) => entity.type === "input");
   const channels = entities.filter((entity) => entity.type === "channel");
   const buses = entities.filter((entity) => entity.type === "bus");
@@ -95,8 +96,18 @@ export function buildPatchFlowGroups(entities: PatchFlowEntity[]) {
     }));
   };
   const inputGroups = createDeviceGroups(inputs, "source", "inputs", entityPalette.input);
-  const sourceLaneHeight = Math.max(1, Math.ceil(inputGroups.length / 3)) * 185;
   const outputGroups = createDeviceGroups(outputs, "output", "outputs", entityPalette.output);
+  if (layout === "compact") {
+    const groupStackHeight = 185;
+    return [
+      ...inputGroups.map((group, index) => ({ ...group, x: 30, y: 40 + index * groupStackHeight })),
+      ...(channels.length ? [{ id: "channels", title: "Mixer Inputs", subtitle: `${channels.length} WING channel strips`, lane: "channel" as const, color: entityPalette.channel, entities: channels, x: 420, y: 40 }] : []),
+      ...(buses.length ? [{ id: "buses", title: "Mixer Buses", subtitle: `${buses.length} auxiliary and subgroup mixes`, lane: "mix" as const, color: entityPalette.bus, entities: buses, x: 820, y: 40 }] : []),
+      ...(matrices.length ? [{ id: "matrices", title: "Matrix Mixes", subtitle: `${matrices.length} matrix destinations`, lane: "mix" as const, color: entityPalette.matrix, entities: matrices, x: 820, y: 245 }] : []),
+      ...outputGroups.map((group, index) => ({ ...group, x: 1220, y: 40 + index * groupStackHeight })),
+    ];
+  }
+  const sourceLaneHeight = Math.max(1, Math.ceil(inputGroups.length / 3)) * 185;
   const outputStart = sourceLaneHeight + 605;
   const groups: PatchFlowGroup[] = [
     ...inputGroups.map((group) => ({ ...group, y: group.y + 40 })),

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import PatchFlowCanvas from "./PatchFlowCanvas";
 
 vi.mock("@xyflow/react", () => ({
-  ReactFlow: ({ children, nodes, nodeTypes, edges }: any) => <div data-testid="react-flow"><span data-testid="edge-count">{edges.length}</span>{nodes.map((node: any) => {
+  ReactFlow: ({ children, nodes, nodeTypes, edges, onEdgeClick }: any) => <div data-testid="react-flow"><span data-testid="edge-count">{edges.length}</span>{edges.map((edge: any) => <button key={edge.id} type="button" aria-label={`Select cable ${edge.id}`} onClick={(event) => onEdgeClick?.(event, edge)} />)}{nodes.map((node: any) => {
     const Component = nodeTypes[node.type];
     return <Component key={node.id} id={node.id} data={node.data} />;
   })}{children}</div>,
@@ -77,5 +77,17 @@ describe("PatchFlowCanvas", () => {
     expect(screen.queryByText("Other Bus")).toBeNull();
     expect(screen.queryByText("Other Output")).toBeNull();
     expect(screen.getByTestId("edge-count").textContent).toBe("3");
+  });
+
+  it("dynamically changes layout, persists the preference, emphasizes the active route, and selects cables", () => {
+    renderCanvas({ preferenceKey: "dynamic-canvas-test" });
+    const canvas = screen.getByTestId("patch-flow-canvas");
+    fireEvent.click(screen.getByText("Compact topology"));
+    expect(canvas.dataset.layout).toBe("compact");
+    expect(window.localStorage.getItem("wingtools.patch-flow.dynamic-canvas-test")).toContain("compact");
+    fireEvent.click(screen.getByText("Emphasize active route"));
+    expect(screen.getByText("Active route emphasized")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Select cable input:AES50A:1-channel:1/));
+    expect(screen.getByText("Cable selected · Kick → Kick Ch")).toBeTruthy();
   });
 });
