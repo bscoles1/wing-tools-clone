@@ -168,3 +168,38 @@
 ## Snapshot Generator UI-Level Verification
 - [x] Add a component-level regression test for generated inventory previews and generation action wiring.
 - [x] Record desktop and mobile verification outcomes for the repaired Snapshot Generator.
+
+## Source & Tag System Repair
+- [x] Inspect and reproduce the reported Source & Tag System failure.
+- [x] Implement a working Source & Tag System route and tagging workflow.
+- [x] Add regression coverage and verify the repaired Source & Tag System on desktop and mobile.
+
+## Comprehensive Quality-Control Audit
+- [x] Inventory every navigation route and functional workflow for audit coverage.
+- [x] Validate route rendering, authenticated data loading, and primary actions across all implemented tools.
+- [x] Repair confirmed non-functional routes, navigation fallbacks, and primary workflows.
+- [x] Add regression coverage for repaired audit findings and record desktop/mobile verification results.
+- [x] Replace documentation fallbacks for routing documents, Signal Flow, Snapshot Linter, and Source Management with functional snapshot-selection launchers.
+- [x] Route sidebar entries for available tools to their functional pages rather than documentation-only pages.
+- [x] Redirect direct My Files and Account Management routes to working workspace and pricing pages.
+- [x] Remove unavailable product entries from the primary navigation to prevent documentation-only dead ends.
+- [x] Exercise and cover pricing access entry, routing-diff comparison, snapshot export, and source-management export actions.
+- [x] Record desktop/mobile verification outcomes for each repaired quality-control route.
+
+## Payment-Free Access Conversion
+- [x] Inventory subscription-tier gates and payment-dependent entry points.
+- [x] Remove payment and tier restrictions from feature access, uploads, exports, and tool navigation.
+- [x] Replace pricing/checkout messaging with an all-tools-available access message.
+- [x] Add regression coverage and verify unrestricted feature access on desktop and mobile.
+
+## Workflow-Level Quality-Control Coverage
+- [x] Add user-facing Snapshot Detail export-action coverage for PDF and Excel workflows.
+- [x] Add user-facing Source Management export-action coverage.
+- [x] Add a Routing Diff UI-level comparison regression test.
+- [x] Verify former tier-gated tools remain reachable and unrestricted on desktop and mobile.
+- [x] Fix the Source Management mobile header so its export action remains fully visible and tappable.
+
+## Page-Level Export and Comparison Verification
+- [x] Add a page-level Routing Diff test that renders comparison results from two loaded snapshots.
+- [x] Add a page-level Snapshot Detail test that runs the PDF and Excel mutation handlers and triggers downloads.
+- [x] Add a page-level Source Management test that runs the modified snapshot export handler and triggers download.

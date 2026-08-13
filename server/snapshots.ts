@@ -173,46 +173,26 @@ export async function upsertSubscription(data: {
 }
 
 /**
- * Check if a user has access to a feature based on their tier
+ * All documented workspace tools are available to every authenticated user.
+ * Subscription records may remain for historical data compatibility but do not gate access.
  */
 export async function hasFeatureAccess(
-  userId: number,
-  feature: "routing_table" | "signal_flow" | "routing_diff" | "snapshot_linter" | "source_management"
+  _userId: number,
+  _feature: "routing_table" | "signal_flow" | "routing_diff" | "snapshot_linter" | "source_management"
 ): Promise<boolean> {
-  const subscription = await getUserSubscription(userId);
-  const tier = subscription?.tier || "Free";
-
-  const featureTiers: Record<string, string[]> = {
-    routing_table: ["Free", "Basic", "Premium"],
-    signal_flow: ["Basic", "Premium"],
-    routing_diff: ["Basic", "Premium"],
-    snapshot_linter: ["Premium"],
-    source_management: ["Basic", "Premium"],
-  };
-
-  return featureTiers[feature]?.includes(tier) || false;
+  return true;
 }
 
 /**
- * Get upload limit for a tier
+ * Uploads are not capped by a plan tier.
  */
-export function getUploadLimit(tier: "Free" | "Basic" | "Premium"): number {
-  const limits: Record<string, number> = {
-    Free: 5,
-    Basic: 10,
-    Premium: 100,
-  };
-  return limits[tier] || 5;
+export function getUploadLimit(_tier: "Free" | "Basic" | "Premium"): number {
+  return Number.MAX_SAFE_INTEGER;
 }
 
 /**
- * Check if a user has reached their upload limit
+ * Uploads are never rejected for subscription limits.
  */
-export async function hasReachedUploadLimit(userId: number): Promise<boolean> {
-  const subscription = await getUserSubscription(userId);
-  const tier = subscription?.tier || "Free";
-  const limit = getUploadLimit(tier);
-
-  const userSnapshots = await getUserSnapshots(userId);
-  return userSnapshots.length >= limit;
+export async function hasReachedUploadLimit(_userId: number): Promise<boolean> {
+  return false;
 }

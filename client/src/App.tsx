@@ -11,6 +11,8 @@ import SnapshotLinter from "@/pages/SnapshotLinter";
 import SourceManagement from "@/pages/SourceManagement";
 import ProtocolExplorer from "@/pages/ProtocolExplorer";
 import SnapshotGenerator from "@/pages/SnapshotGenerator";
+import SourceTags from "@/pages/SourceTags";
+import SnapshotToolLauncher from "@/pages/SnapshotToolLauncher";
 import NotFound from "@/pages/NotFound";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,6 +39,20 @@ function AppContent() {
       setLocation("/protocol-explorer");
     } else if (page === "snapshot-generator") {
       setLocation("/snapshot-generator");
+    } else if (page === "source-tags") {
+      setLocation("/source-tags");
+    } else if (page === "routing-generator") {
+      setLocation("/routing-generator");
+    } else if (page === "signal-flow") {
+      setLocation("/signal-flow");
+    } else if (page === "snapshot-linter") {
+      setLocation("/snapshot-linter");
+    } else if (page === "source-management") {
+      setLocation("/source-management");
+    } else if (page === "my-files") {
+      setLocation("/uploader");
+    } else if (page === "account-management") {
+      setLocation("/pricing");
     } else {
       setLocation("/manual");
     }
@@ -70,12 +86,19 @@ function AppContent() {
               {() => <HomePage onNavigate={handleNavigate} />}
             </Route>
             <Route path={"/uploader"} component={Uploader} />
+            <Route path={"/my-files"} component={Uploader} />
             <Route path={"/pricing"} component={Pricing} />
+            <Route path={"/account-management"} component={Pricing} />
             <Route path={"/snapshot/:id"} component={SnapshotDetail} />
             <Route path={"/snapshot/:id/signal-flow"} component={SignalFlowDiagram} />
             <Route path={"/routing-diff"} component={RoutingDiff} />
             <Route path={"/protocol-explorer"} component={ProtocolExplorer} />
             <Route path={"/snapshot-generator"} component={SnapshotGenerator} />
+            <Route path={"/source-tags"} component={SourceTags} />
+            <Route path={"/routing-generator"}>{() => <SnapshotToolLauncher tool="routing" />}</Route>
+            <Route path={"/signal-flow"}>{() => <SnapshotToolLauncher tool="signal-flow" />}</Route>
+            <Route path={"/snapshot-linter"}>{() => <SnapshotToolLauncher tool="linter" />}</Route>
+            <Route path={"/source-management"}>{() => <SnapshotToolLauncher tool="source-management" />}</Route>
             <Route path={"/snapshot/:id/linter"} component={SnapshotLinter} />
             <Route path={"/snapshot/:id/source-management"} component={SourceManagement} />
             <Route path={"/manual"}>

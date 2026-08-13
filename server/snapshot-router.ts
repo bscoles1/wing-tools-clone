@@ -8,7 +8,6 @@ import {
   getUserSubscription,
   upsertSubscription,
   hasFeatureAccess,
-  hasReachedUploadLimit,
 } from "./snapshots";
 import { parseWingSnapshot, serializeWingSnapshot } from "./parsers/wingParser";
 import { TRPCError } from "@trpc/server";
@@ -27,15 +26,6 @@ export const snapshotRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check upload limit before parsing or writing anything.
-      const limitReached = await hasReachedUploadLimit(ctx.user.id);
-      if (limitReached) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Upload limit reached. Please upgrade your subscription.",
-        });
-      }
-
       let parsed;
       try {
         parsed = parseWingSnapshot(input.rawJson);

@@ -5,7 +5,11 @@ import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Trash2, Download, ClipboardCopy, ArrowLeft, FileJson, BarChart3, GitCompare, AlertCircle, Settings, FileSpreadsheet, Tags, ShieldCheck, Network } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
+
+export function DocumentationExportActions({ onPDF, onExcel, isPDFPending = false, isExcelPending = false }: { onPDF: () => void; onExcel: () => void; isPDFPending?: boolean; isExcelPending?: boolean }) {
+  return <div className="mt-4 flex flex-wrap gap-2"><Button onClick={onPDF} disabled={isPDFPending}>{isPDFPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Routing PDF</Button><Button variant="outline" onClick={onExcel} disabled={isExcelPending}>{isExcelPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Excel Workbook</Button><span className="flex items-center gap-1.5 self-center text-xs font-medium text-slate-600 dark:text-slate-300"><Tags className="h-3.5 w-3.5" /> Stagebox labels are included in the PDF report</span></div>;
+}
 
 export default function SnapshotDetail() {
   const { isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/" });
@@ -188,32 +192,7 @@ export default function SnapshotDetail() {
                   <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Create a routing report for your crew or a filterable workbook for engineering handoff. The PDF includes routing tables, cross-references, and stagebox-label information.</p>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  onClick={() => generatePDFMutation.mutate({ snapshotId })}
-                  disabled={generatePDFMutation.isPending}
-                >
-                  {generatePDFMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Routing PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => generateExcelMutation.mutate({ snapshotId })}
-                  disabled={generateExcelMutation.isPending}
-                >
-                  {generateExcelMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Excel Workbook
-                </Button>
-                <span className="flex items-center gap-1.5 self-center text-xs font-medium text-slate-600 dark:text-slate-300"><Tags className="h-3.5 w-3.5" /> Stagebox labels are included in the PDF report</span>
-              </div>
+              <DocumentationExportActions onPDF={() => generatePDFMutation.mutate({ snapshotId })} onExcel={() => generateExcelMutation.mutate({ snapshotId })} isPDFPending={generatePDFMutation.isPending} isExcelPending={generateExcelMutation.isPending} />
               <Button className="mt-3" variant="ghost" size="sm" onClick={handleCopyLink}><ClipboardCopy className="mr-2 h-4 w-4" /> Copy snapshot link</Button>
             </div>
           </Card>

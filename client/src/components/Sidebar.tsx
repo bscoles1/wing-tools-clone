@@ -1,8 +1,8 @@
 import React from "react";
 import { 
-  FileText, Home, Upload, Layers, GitCompare, AlertCircle, Sliders, 
-  BookOpen, HelpCircle, Shield, Cpu, ExternalLink, Mail, FolderOpen,
-  Settings, CheckSquare, Sparkles, UserCheck, MessageSquare, Network
+  FileText, Home, Upload, GitCompare, AlertCircle, Sliders,
+  BookOpen, Cpu, Mail, FolderOpen,
+  Settings, CheckSquare, Sparkles, Network
 } from "lucide-react";
 
 export type Page =
@@ -40,18 +40,14 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: SidebarPro
   const docSections = [
     { id: "getting-started", label: "Getting Started", icon: BookOpen },
     { id: "my-files", label: "My Files & Snapshots", icon: FolderOpen },
-    { id: "projects", label: "Projects & Workspaces", icon: Layers },
     { id: "routing-generator", label: "Routing Generator", icon: FileText },
     { id: "signal-flow", label: "Signal Flow Diagram", icon: Cpu },
     { id: "routing-diff", label: "Routing Diff", icon: GitCompare },
     { id: "account-management", label: "Account Management", icon: Settings },
     { id: "snapshot-linter", label: "Snapshot Linter", icon: AlertCircle },
     { id: "source-tags", label: "Source & Tag System", icon: Sliders },
-    { id: "multi-mixer", label: "Multi-Mixer Routing", icon: Layers },
     { id: "source-management", label: "Source Management", icon: Settings },
     { id: "snapshot-generator", label: "Snapshot Generator", icon: Sparkles },
-    { id: "referrals", label: "Referral Program", icon: UserCheck },
-    { id: "wingpt", label: "WinGPT Assistant", icon: MessageSquare },
     { id: "protocol-explorer", label: "Remote Protocol Explorer", icon: Network },
   ];
 
