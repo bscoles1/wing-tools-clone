@@ -120,3 +120,10 @@
 - [x] Diagnose why Snapshot Linter analysis is not running or rendering results.
 - [x] Repair linter rule execution and result display against uploaded snapshots.
 - [x] Add regression coverage and verify the linter workflow.
+
+## Snapshot Linter Full Signal Results
+- [x] Replace the five-item affected-signal preview with progressive controls that reveal all affected signals.
+- [x] Verify large linter findings remain readable and every signal can be viewed.
+
+## Snapshot Linter Interactive Verification
+- [x] Add and run an interactive UI test proving Show more and Show all reveal every affected signal.

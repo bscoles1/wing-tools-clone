@@ -5,6 +5,10 @@ export interface LintIssue {
   affectedItems: string[];
 }
 
+export function getVisibleAffectedItems(items: string[], visibleCount: number): string[] {
+  return items.slice(0, visibleCount);
+}
+
 type SnapshotEntity = {
   name?: string;
   index?: number;

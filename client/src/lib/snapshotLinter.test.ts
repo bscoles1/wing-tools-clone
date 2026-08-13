@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lintSnapshot } from "./snapshotLinter";
+import { getVisibleAffectedItems, lintSnapshot } from "./snapshotLinter";
 
 describe("lintSnapshot", () => {
   it("returns diagnostic results for a complete normalized snapshot", () => {
@@ -32,5 +32,13 @@ describe("lintSnapshot", () => {
       "Unpatched Channels",
       "Unrouted Channels",
     ]));
+  });
+
+  it("progressively reveals every affected signal without truncation", () => {
+    const signals = Array.from({ length: 17 }, (_, index) => `Signal ${index + 1}`);
+
+    expect(getVisibleAffectedItems(signals, 5)).toHaveLength(5);
+    expect(getVisibleAffectedItems(signals, 15)).toHaveLength(15);
+    expect(getVisibleAffectedItems(signals, signals.length)).toEqual(signals);
   });
 });

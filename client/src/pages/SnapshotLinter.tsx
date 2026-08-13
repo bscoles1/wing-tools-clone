@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { AffectedSignalList } from "@/components/AffectedSignalList";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { LintIssue, lintSnapshot } from "@/lib/snapshotLinter";
@@ -171,7 +172,8 @@ export default function SnapshotLinter() {
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Issues Found</h2>
 
             <div className="space-y-4">
-              {issues.map((issue, idx) => (
+              {issues.map((issue, idx) => {
+                return (
                 <div key={idx} className={`p-4 rounded-lg border-2 ${getSeverityColor(issue.severity)}`}>
                   <div className="flex items-start gap-3">
                     {getSeverityIcon(issue.severity)}
@@ -183,27 +185,12 @@ export default function SnapshotLinter() {
                         </span>
                       </div>
                       <p className="text-slate-700 dark:text-slate-300 mt-1">{issue.message}</p>
-                      {issue.affectedItems.length > 0 && (
-                        <div className="mt-3 text-sm">
-                          <p className="font-medium text-slate-600 dark:text-slate-400 mb-2">Affected items:</p>
-                          <ul className="list-disc list-inside space-y-1">
-                            {issue.affectedItems.slice(0, 5).map((item, i) => (
-                              <li key={i} className="text-slate-600 dark:text-slate-400">
-                                {item}
-                              </li>
-                            ))}
-                            {issue.affectedItems.length > 5 && (
-                              <li className="text-slate-600 dark:text-slate-400">
-                                ...and {issue.affectedItems.length - 5} more
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
+                      <AffectedSignalList items={issue.affectedItems} />
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}
