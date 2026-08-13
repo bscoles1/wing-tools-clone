@@ -238,11 +238,21 @@ export default function SignalFlowDiagram() {
         </div>
 
         <Card className="overflow-hidden border-slate-800 bg-slate-950 p-0 shadow-2xl shadow-slate-950/20">
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/95 px-4 py-3 sm:px-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">Signal Flow Diagram</p>
+              <p className="mt-1 text-sm font-semibold text-white">Live snapshot · {mixerName}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+              <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-emerald-200"><i className="h-2 w-2 rounded-full bg-emerald-400" />Live routing data</span>
+              <span className="rounded-full border border-indigo-400/25 bg-indigo-400/10 px-2.5 py-1 text-indigo-200">Central mind-map layout</span>
+            </div>
+          </div>
           <div className={`relative isolate overflow-hidden px-4 py-6 sm:px-6 sm:py-8 ${isPanning ? "cursor-grabbing" : "cursor-grab"}`} onPointerDown={handleCanvasPointerDown} onPointerMove={handleCanvasPointerMove} onPointerUp={finishCanvasPan} onPointerCancel={finishCanvasPan} onWheel={(event) => { if (event.ctrlKey || event.metaKey) { event.preventDefault(); setZoom((current) => changeMindMapZoom(current, event.deltaY < 0 ? "in" : "out")); } }} style={{ touchAction: "none" }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-45 [background-image:radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.22)_1px,transparent_0)] [background-size:24px_24px]" />
             <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-3xl" />
             <div className="relative z-10 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/75 p-2 text-xs text-slate-200 shadow-lg backdrop-blur">
-              <div className="flex items-center gap-1"><span className="hidden px-2 text-slate-400 sm:inline">Canvas</span><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setZoom((current) => changeMindMapZoom(current, "out"))} aria-label="Zoom out"><Minus className="h-4 w-4" /></Button><span className="min-w-12 text-center font-semibold">{Math.round(zoom * 100)}%</span><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setZoom((current) => changeMindMapZoom(current, "in"))} aria-label="Zoom in"><Plus className="h-4 w-4" /></Button><Button variant="ghost" size="sm" className="h-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={resetViewport}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reset</Button></div>
+              <div className="flex items-center gap-1"><span className="hidden px-2 text-slate-400 sm:inline">Layout controls</span><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setZoom((current) => changeMindMapZoom(current, "out"))} aria-label="Zoom out"><Minus className="h-4 w-4" /></Button><span className="min-w-12 text-center font-semibold">{Math.round(zoom * 100)}%</span><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setZoom((current) => changeMindMapZoom(current, "in"))} aria-label="Zoom in"><Plus className="h-4 w-4" /></Button><Button variant="ghost" size="sm" className="h-8 text-slate-100 hover:bg-white/10 hover:text-white" onClick={resetViewport}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reset</Button></div>
               <span className="flex items-center gap-1.5 px-2 text-slate-400"><Hand className="h-3.5 w-3.5" />Drag background to pan <span className="hidden sm:inline">· Ctrl/Cmd + scroll to zoom</span></span>
             </div>
             <div className="relative grid gap-5 transition-transform duration-200 lg:grid-cols-[minmax(0,1fr)_15rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_auto] lg:items-center lg:gap-x-8 lg:gap-y-10" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center center" }}>

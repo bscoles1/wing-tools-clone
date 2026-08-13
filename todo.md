@@ -223,3 +223,9 @@
 - [x] Add a focus selected route mode that isolates the selected signal path.
 - [x] Add per-branch text search and source filtering.
 - [x] Add regression coverage and verify advanced navigation on desktop and mobile.
+
+## Attached Signal Flow Reference Adaptation
+- [x] Extract the Signal Flow-specific hierarchy, controls, and interaction patterns from the attached content.
+- [x] Map applicable reference patterns to the current mind map without reintroducing tier restrictions.
+- [x] Add a reference-inspired live-snapshot context header and compact diagram-workspace labeling around the existing controls.
+- [x] Implement and verify the selected reference-informed Signal Flow improvements.
