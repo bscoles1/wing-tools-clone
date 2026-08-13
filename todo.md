@@ -159,3 +159,12 @@
 ## Protocol Explorer UI-Level Verification
 - [x] Add a component-level regression test for snapshot-derived OSC previews and copy behavior.
 - [x] Record desktop and mobile verification outcomes for the protocol explorer’s facts, visual, and command layout.
+
+## Snapshot Generator Repair
+- [x] Inspect and reproduce the reported Snapshot Generator failure.
+- [x] Implement a working Snapshot Generator route and generation workflow.
+- [x] Add regression coverage and verify the repaired Snapshot Generator on desktop and mobile.
+
+## Snapshot Generator UI-Level Verification
+- [x] Add a component-level regression test for generated inventory previews and generation action wiring.
+- [x] Record desktop and mobile verification outcomes for the repaired Snapshot Generator.

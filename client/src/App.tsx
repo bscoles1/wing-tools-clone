@@ -10,6 +10,7 @@ import RoutingDiff from "@/pages/RoutingDiff";
 import SnapshotLinter from "@/pages/SnapshotLinter";
 import SourceManagement from "@/pages/SourceManagement";
 import ProtocolExplorer from "@/pages/ProtocolExplorer";
+import SnapshotGenerator from "@/pages/SnapshotGenerator";
 import NotFound from "@/pages/NotFound";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +35,8 @@ function AppContent() {
       setLocation("/routing-diff");
     } else if (page === "protocol-explorer") {
       setLocation("/protocol-explorer");
+    } else if (page === "snapshot-generator") {
+      setLocation("/snapshot-generator");
     } else {
       setLocation("/manual");
     }
@@ -72,6 +75,7 @@ function AppContent() {
             <Route path={"/snapshot/:id/signal-flow"} component={SignalFlowDiagram} />
             <Route path={"/routing-diff"} component={RoutingDiff} />
             <Route path={"/protocol-explorer"} component={ProtocolExplorer} />
+            <Route path={"/snapshot-generator"} component={SnapshotGenerator} />
             <Route path={"/snapshot/:id/linter"} component={SnapshotLinter} />
             <Route path={"/snapshot/:id/source-management"} component={SourceManagement} />
             <Route path={"/manual"}>
