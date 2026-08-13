@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNodeGroupLabel, getNodeSourceLabel, getSelectedPathRoles, type SignalFlowNode } from "./signalFlowTrace";
+import { getFocusedSignalFlowNodeIds, getNodeGroupLabel, getNodeSourceLabel, getSelectedPathRoles, type SignalFlowNode } from "./signalFlowTrace";
 
 function createNode(id: string, type: SignalFlowNode["type"], name: string, incoming: string[] = [], outgoing: string[] = [], group?: string): SignalFlowNode {
   return { id, type, name, incoming, outgoing, group };
@@ -32,5 +32,14 @@ describe("Signal Flow context and tracing", () => {
       "matrix:1": "downstream",
       "output:local:1": "downstream",
     });
+  });
+
+  it("limits canvas entities to the selected route only when route focus is enabled", () => {
+    const traceRoles = getSelectedPathRoles(nodes, "channel:1");
+    expect(getFocusedSignalFlowNodeIds(traceRoles, "channel:1", false)).toBeNull();
+    expect(getFocusedSignalFlowNodeIds(traceRoles, null, true)).toBeNull();
+    expect(Array.from(getFocusedSignalFlowNodeIds(traceRoles, "channel:1", true) ?? [])).toEqual([
+      "channel:1", "input:local:1", "bus:1", "matrix:1", "output:local:1",
+    ]);
   });
 });

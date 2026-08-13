@@ -60,6 +60,7 @@ export function getSelectedPathRoles(nodeMap: Map<string, SignalFlowNode>, selec
   return roles;
 }
 
-export function getGroupKeyForNodeType(type: SignalFlowNode["type"]): string {
-  return { input: "inputs", channel: "channels", bus: "buses", matrix: "matrices", output: "outputs" }[type];
+export function getFocusedSignalFlowNodeIds(traceRoles: Map<string, TraceRole>, selectedNodeId: string | null, focusEnabled: boolean): Set<string> | null {
+  if (!focusEnabled || !selectedNodeId || traceRoles.size === 0) return null;
+  return new Set(traceRoles.keys());
 }

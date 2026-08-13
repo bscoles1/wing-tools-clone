@@ -229,3 +229,16 @@
 - [x] Map applicable reference patterns to the current mind map without reintroducing tier restrictions.
 - [x] Add a reference-inspired live-snapshot context header and compact diagram-workspace labeling around the existing controls.
 - [x] Implement and verify the selected reference-informed Signal Flow improvements.
+
+## Patch-Flow Signal Flow Canvas
+- [x] Map the supplied patch-cable canvas structure to inputs, channels, buses, matrices, and outputs.
+- [x] Design grouped routing lanes, visible edge styling, filters, focus behavior, and navigation controls.
+- [x] Replace the radial mind map with grouped, positionable routing blocks and visible connection paths.
+- [x] Preserve route focus, filtering, source labels, inspection, pan/zoom, and reset/minimap navigation.
+- [x] Add regression coverage and verify the patch-flow canvas on desktop and mobile.
+- [x] Optimize large snapshots with active-route density controls, wrapped device groups, and scrollable patch blocks.
+
+## Patch-Flow Canvas UI Verification
+- [x] Add a component-level regression test for grouped patch blocks, visible routes, and canvas controls.
+- [x] Add interactive coverage for search, source/type filters, and selected-route focus isolation.
+- [x] Retire or update stale mind-map-specific Signal Flow tests so coverage aligns with the patch-flow canvas.
