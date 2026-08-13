@@ -3,6 +3,7 @@ export type SignalFlowNode = {
   type: "input" | "channel" | "bus" | "matrix" | "output";
   name: string;
   group?: string;
+  configuredSource?: string;
   incoming: string[];
   outgoing: string[];
 };
@@ -21,7 +22,7 @@ export function getNodeGroupLabel(node: SignalFlowNode): string {
 }
 
 export function getNodeSourceLabel(node: SignalFlowNode, nodeMap: Map<string, SignalFlowNode>): string {
-  if (node.type === "input") return "Physical source";
+  if (node.type === "input") return `Physical source · ${node.configuredSource || node.group || "I/O"}`;
 
   const sources = node.incoming
     .map((id) => nodeMap.get(id))
@@ -29,8 +30,11 @@ export function getNodeSourceLabel(node: SignalFlowNode, nodeMap: Map<string, Si
     .map((candidate) => candidate.name)
     .slice(0, 2);
 
-  if (sources.length === 0) return node.type === "channel" ? "No source assigned" : "No upstream source";
-  return `From ${sources.join(" · ")}${node.incoming.length > sources.length ? ` +${node.incoming.length - sources.length}` : ""}`;
+  const prefix = { channel: "Input source", bus: "Bus sources", matrix: "Matrix sources", output: "Output feed" }[node.type];
+  const configured = node.configuredSource ? [node.configuredSource] : [];
+  const details = [...configured, ...sources];
+  if (details.length === 0) return node.type === "channel" ? "Input source · none assigned" : `${prefix} · none detected`;
+  return `${prefix} · ${details.join(" · ")}${node.incoming.length > sources.length ? ` +${node.incoming.length - sources.length}` : ""}`;
 }
 
 export function getSelectedPathRoles(nodeMap: Map<string, SignalFlowNode>, selectedNodeId: string | null): Map<string, TraceRole> {

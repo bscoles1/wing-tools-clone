@@ -203,3 +203,9 @@
 - [x] Add a page-level Routing Diff test that renders comparison results from two loaded snapshots.
 - [x] Add a page-level Snapshot Detail test that runs the PDF and Excel mutation handlers and triggers downloads.
 - [x] Add a page-level Source Management test that runs the modified snapshot export handler and triggers download.
+
+## Source Information Coverage
+- [x] Review the parsed data model and current routing views for source fields on inputs, channels, buses, matrices, and outputs.
+- [x] Define a consistent source-label format with meaningful fallbacks for every routing entity.
+- [x] Show source information for inputs, channels, buses, matrices, and outputs in the routing-focused views.
+- [x] Add regression coverage and verify the source-aware layouts on desktop and mobile.

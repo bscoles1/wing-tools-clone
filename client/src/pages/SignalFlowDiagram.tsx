@@ -119,6 +119,7 @@ export default function SignalFlowDiagram() {
         name: input.name || `${input.group} ${input.index}`,
         index: input.index,
         group: input.group,
+        configuredSource: `${input.group} ${input.index}`,
         gain: input.gain,
         outgoing: [],
         incoming: [],
@@ -134,6 +135,7 @@ export default function SignalFlowDiagram() {
         name: output.name || `${output.group} ${output.index}`,
         index: output.index,
         group: output.group,
+        configuredSource: output.source ? `${output.source.group} ${output.source.index}` : undefined,
         gain: output.level,
         outgoing: [],
         incoming: [],
@@ -147,6 +149,7 @@ export default function SignalFlowDiagram() {
         name: channel.name || `Channel ${channel.index}`,
         index: channel.index,
         group: channel.group,
+        configuredSource: channel.inputSource ? `${channel.inputSource.group} ${channel.inputSource.index}` : undefined,
         gain: channel.gain,
         mute: channel.mute,
         solo: channel.solo,
@@ -206,6 +209,13 @@ export default function SignalFlowDiagram() {
     }
     for (const matrix of parsed.matrices ?? []) {
       for (const route of matrix.routes ?? []) link(`matrix:${matrix.index}`, targetId(route.destination, route.index));
+    }
+    for (const output of parsed.outputs ?? []) {
+      const sourceGroup = String(output.source?.group || "").toLowerCase();
+      const sourceType = sourceGroup === "mtx" ? "matrix" : sourceGroup === "ch" ? "channel" : sourceGroup;
+      if (["channel", "bus", "matrix"].includes(sourceType) && output.source?.index !== undefined) {
+        link(`${sourceType}:${output.source.index}`, `output:${output.group}:${output.index}`);
+      }
     }
     return nodes;
   }, [snapshot]);

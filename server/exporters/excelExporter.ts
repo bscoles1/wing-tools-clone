@@ -1,16 +1,19 @@
 import * as XLSX from "xlsx";
 import type { WingMixerSnapshot } from "../parsers/wingParser";
+import { buildRoutingSourceSummaries, formatPatchSource } from "./sourceSummary";
 
 /**
  * Generate an Excel workbook with routing tables from a WING snapshot
  */
 export async function generateRoutingTableExcel(snapshot: WingMixerSnapshot): Promise<Buffer> {
   const workbook = XLSX.utils.book_new();
+  const sourceSummaries = buildRoutingSourceSummaries(snapshot);
 
   // Sheet 1: Physical Inputs
-  const inputsData = [["Group", "Index", "Name", "Gain (dB)", "Phantom Power", "Stereo Mode"]];
+  const inputsData = [["Physical Source", "Group", "Index", "Name", "Gain (dB)", "Phantom Power", "Stereo Mode"]];
   for (const input of snapshot.inputs) {
     inputsData.push([
+      formatPatchSource(input),
       input.group,
       input.index.toString(),
       input.name,
@@ -25,7 +28,7 @@ export async function generateRoutingTableExcel(snapshot: WingMixerSnapshot): Pr
   // Sheet 2: Mixer Channels
   const channelsData = [["Channel", "Name", "Input Source", "Gain (dB)", "Mute", "Solo", "Routes"]];
   for (const channel of snapshot.channels) {
-    const inputSource = channel.inputSource ? `${channel.inputSource.group}${channel.inputSource.index}` : "None";
+    const inputSource = sourceSummaries.channelSources.get(channel.index) || "No input source assigned";
     const routes = channel.routes.map((r) => `${r.group}${r.index}`).join(", ");
     channelsData.push([
       channel.index.toString(),
@@ -43,28 +46,29 @@ export async function generateRoutingTableExcel(snapshot: WingMixerSnapshot): Pr
   // Sheet 3: Physical Outputs
   const outputsData = [["Group", "Index", "Name", "Source", "Level (dB)"]];
   for (const output of snapshot.outputs) {
-    const source = output.source ? `${output.source.group}${output.source.index}` : "None";
+    const source = sourceSummaries.outputSources.get(output.id) || "No source assigned";
     outputsData.push([output.group, output.index.toString(), output.name, source, (output.level || 0).toString()]);
   }
   const outputsSheet = XLSX.utils.aoa_to_sheet(outputsData);
   XLSX.utils.book_append_sheet(workbook, outputsSheet, "Physical Outputs");
 
   // Sheet 4: Mix Buses
-  const busesData = [["Bus", "Name", "Mono", "Gain (dB)", "Mute", "Routes"]];
+  const busesData = [["Bus", "Name", "Upstream Sources", "Mono", "Gain (dB)", "Mute", "Routes"]];
   for (const bus of snapshot.buses) {
     const routes = bus.routes.map((r) => `${r.group}${r.index}`).join(", ");
-    busesData.push([bus.index.toString(), bus.name, bus.isMono ? "Yes" : "No", (bus.gain || 0).toString(), bus.mute ? "Yes" : "No", routes || "None"]);
+    busesData.push([bus.index.toString(), bus.name, sourceSummaries.busSources.get(bus.index) || "No channel source detected", bus.isMono ? "Yes" : "No", (bus.gain || 0).toString(), bus.mute ? "Yes" : "No", routes || "None"]);
   }
   const busesSheet = XLSX.utils.aoa_to_sheet(busesData);
   XLSX.utils.book_append_sheet(workbook, busesSheet, "Mix Buses");
 
   // Sheet 5: Matrix Mixes
-  const matricesData = [["Matrix", "Name", "Mono", "Gain (dB)", "Mute", "Routes"]];
+  const matricesData = [["Matrix", "Name", "Upstream Sources", "Mono", "Gain (dB)", "Mute", "Routes"]];
   for (const matrix of snapshot.matrices) {
     const routes = matrix.routes.map((r) => `${r.group}${r.index}`).join(", ");
     matricesData.push([
-      matrix.index.toString(),
-      matrix.name,
+        matrix.index.toString(),
+        matrix.name,
+        sourceSummaries.matrixSources.get(matrix.index) || "No upstream source detected",
       matrix.isMono ? "Yes" : "No",
       (matrix.gain || 0).toString(),
       matrix.mute ? "Yes" : "No",
