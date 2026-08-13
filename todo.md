@@ -248,3 +248,9 @@
 - [x] Add selectable cable paths with live route statistics and an active-route emphasis mode.
 - [x] Persist canvas view preferences for each snapshot and reset the viewport when the displayed routing set changes.
 - [x] Add regression coverage and responsive validation for dynamic canvas behavior.
+
+## Snapshot List Deletion
+- [x] Review existing snapshot ownership and database deletion support.
+- [x] Add a confirmed delete action to each Upload & Document a Snapshot list entry.
+- [x] Refresh the snapshot list and show clear success or error feedback after deletion.
+- [x] Add regression coverage and verify the deletion workflow on desktop and mobile.

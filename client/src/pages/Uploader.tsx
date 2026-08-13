@@ -1,10 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { AlertCircle, ArrowRight, CheckCircle, FileSpreadsheet, FileText, Loader2, Route, ScanSearch, Tags, Upload } from "lucide-react";
-import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { AlertCircle, ArrowRight, CheckCircle, FileSpreadsheet, FileText, Loader2, Route, ScanSearch, Tags, Trash2, Upload } from "lucide-react";
+import React, { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { toast } from "sonner";
 
 const outputOptions = [
@@ -37,6 +38,7 @@ export default function Uploader() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentSnapshotId, setRecentSnapshotId] = useState<number | null>(null);
+  const [snapshotPendingDeletion, setSnapshotPendingDeletion] = useState<{ id: number; filename: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const listSnapshotsQuery = trpc.snapshot.listSnapshots.useQuery(undefined, { enabled: isAuthenticated });
@@ -45,6 +47,17 @@ export default function Uploader() {
       toast.success(`Snapshot uploaded successfully! (${data.summary.totalChannels} channels)`);
       void listSnapshotsQuery.refetch();
       setRecentSnapshotId(data.snapshotId);
+    },
+  });
+  const deleteSnapshotMutation = trpc.snapshot.deleteSnapshot.useMutation({
+    onSuccess: (_data, variables) => {
+      if (recentSnapshotId === variables.snapshotId) setRecentSnapshotId(null);
+      toast.success("Snapshot deleted from your workspace.");
+      setSnapshotPendingDeletion(null);
+      void listSnapshotsQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "The snapshot could not be deleted. Please try again.");
     },
   });
 
@@ -96,6 +109,10 @@ export default function Uploader() {
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     void processFiles(Array.from(event.target.files || []));
     event.target.value = "";
+  };
+  const confirmDeleteSnapshot = () => {
+    if (!snapshotPendingDeletion) return;
+    deleteSnapshotMutation.mutate({ snapshotId: snapshotPendingDeletion.id });
   };
 
   if (loading || !isAuthenticated) {
@@ -166,12 +183,18 @@ export default function Uploader() {
 
         {listSnapshotsQuery.data && listSnapshotsQuery.data.length > 0 && (
           <section className="mt-12"><h2 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Your Snapshots</h2><div className="space-y-4">{listSnapshotsQuery.data.map((snapshot) => (
-            <Card key={snapshot.id} className="p-6"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0 flex-1"><div className="mb-2 flex items-center gap-3"><CheckCircle className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" /><h3 className="truncate font-semibold text-slate-900 dark:text-white">{snapshot.filename}</h3></div><div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4"><Metric label="Mixer" value={snapshot.mixerName || "Unknown"} /><Metric label="Channels" value={String(snapshot.totalChannels || 0)} /><Metric label="Inputs" value={String(snapshot.totalInputs || 0)} /><Metric label="Outputs" value={String(snapshot.totalOutputs || 0)} /></div></div><div className="flex flex-wrap gap-2 lg:justify-end"><Button onClick={() => setLocation(`/snapshot/${snapshot.id}`)}>View <ArrowRight className="ml-2 h-4 w-4" /></Button><Button size="sm" variant="outline" onClick={() => setLocation(`/snapshot/${snapshot.id}/linter`)}>Linter</Button><Button size="sm" variant="outline" onClick={() => setLocation(`/snapshot/${snapshot.id}/signal-flow`)}>Signal Flow</Button></div></div></Card>
+            <Card key={snapshot.id} className="p-6"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0 flex-1"><div className="mb-2 flex items-center gap-3"><CheckCircle className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" /><h3 className="truncate font-semibold text-slate-900 dark:text-white">{snapshot.filename}</h3></div><div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4"><Metric label="Mixer" value={snapshot.mixerName || "Unknown"} /><Metric label="Channels" value={String(snapshot.totalChannels || 0)} /><Metric label="Inputs" value={String(snapshot.totalInputs || 0)} /><Metric label="Outputs" value={String(snapshot.totalOutputs || 0)} /></div></div><div className="flex flex-wrap gap-2 lg:justify-end"><Button onClick={() => setLocation(`/snapshot/${snapshot.id}`)}>View <ArrowRight className="ml-2 h-4 w-4" /></Button><Button size="sm" variant="outline" onClick={() => setLocation(`/snapshot/${snapshot.id}/linter`)}>Linter</Button><Button size="sm" variant="outline" onClick={() => setLocation(`/snapshot/${snapshot.id}/signal-flow`)}>Signal Flow</Button><Button size="sm" variant="outline" className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50" onClick={() => setSnapshotPendingDeletion({ id: snapshot.id, filename: snapshot.filename })} aria-label={`Delete ${snapshot.filename}`}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete</Button></div></div></Card>
           ))}</div></section>
         )}
 
         {listSnapshotsQuery.data && listSnapshotsQuery.data.length === 0 && !isProcessing && <div className="mt-12 text-center"><AlertCircle className="mx-auto mb-4 h-12 w-12 text-slate-400" /><h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">No snapshots yet</h3><p className="text-slate-600 dark:text-slate-400">Upload your first WING snapshot file to start validating and documenting your routing.</p></div>}
       </main>
+      <AlertDialog open={Boolean(snapshotPendingDeletion)} onOpenChange={(open) => { if (!open && !deleteSnapshotMutation.isPending) setSnapshotPendingDeletion(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete this snapshot?</AlertDialogTitle><AlertDialogDescription><strong>{snapshotPendingDeletion?.filename}</strong> and its generated documentation will be permanently removed from your workspace. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={deleteSnapshotMutation.isPending}>Keep snapshot</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteSnapshot} className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-600" disabled={deleteSnapshotMutation.isPending}>{deleteSnapshotMutation.isPending ? "Deleting…" : "Delete snapshot"}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
