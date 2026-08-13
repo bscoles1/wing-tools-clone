@@ -101,3 +101,8 @@
 - [x] Inspect files inside the ZIP to identify specific design, UI, or functional requirements.
 - [x] Align the WingTools clone implementation with any unique specifications from the ZIP.
 - [x] Verify build, tests, and deliver the final checkpoint.
+
+## Signal Flow Mind Map Redesign
+- [x] Replace the staged signal flow grid with a centered, branch-based mind map layout.
+- [x] Preserve click-to-expand routing details, node status, and snapshot-driven signal relationships.
+- [x] Verify the redesigned visualization on desktop and mobile viewports.
